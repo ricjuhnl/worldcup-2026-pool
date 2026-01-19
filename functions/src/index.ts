@@ -1,4 +1,6 @@
-import * as functions from 'firebase-functions';
+import { onSchedule } from 'firebase-functions/v2/scheduler';
+import { onValueWritten } from 'firebase-functions/v2/database';
+import { logger } from 'firebase-functions';
 import * as admin from 'firebase-admin';
 
 admin.initializeApp();
@@ -76,97 +78,92 @@ const calculatePoints = (
  * Scheduled function to fetch and update match scores from FIFA API
  * Runs every 1 minute during the tournament
  */
-export const updateMatchScores = functions.pubsub
-  .schedule('every 1 minutes')
-  .onRun(async () => {
-    functions.logger.info('Updating match scores from FIFA API...');
+export const updateMatchScores = onSchedule('every 1 minutes', async () => {
+  logger.info('Updating match scores from FIFA API...');
 
-    try {
-      // Get today's date range
-      const now = new Date();
-      const startOfDay = new Date(now);
-      startOfDay.setHours(0, 0, 0, 0);
-      const endOfDay = new Date(now);
-      endOfDay.setHours(23, 59, 59, 999);
+  try {
+    // Get today's date range
+    const now = new Date();
+    const startOfDay = new Date(now);
+    startOfDay.setHours(0, 0, 0, 0);
+    const endOfDay = new Date(now);
+    endOfDay.setHours(23, 59, 59, 999);
 
-      const fromDate = startOfDay.toISOString();
-      const toDate = endOfDay.toISOString();
+    const fromDate = startOfDay.toISOString();
+    const toDate = endOfDay.toISOString();
 
-      // Fetch today's matches from FIFA API
-      const apiUrl = `https://api.fifa.com/api/v3/calendar/matches?idseason=${FIFA_SEASON_ID}&idcompetition=${FIFA_COMPETITION_ID}&from=${fromDate}&to=${toDate}&count=500`;
+    // Fetch today's matches from FIFA API
+    const apiUrl = `https://api.fifa.com/api/v3/calendar/matches?idseason=${FIFA_SEASON_ID}&idcompetition=${FIFA_COMPETITION_ID}&from=${fromDate}&to=${toDate}&count=500`;
 
-      const response = await fetch(apiUrl);
-      if (!response.ok) {
-        throw new Error(`FIFA API error: ${response.status}`);
-      }
+    const response = await fetch(apiUrl);
+    if (!response.ok) {
+      throw new Error(`FIFA API error: ${response.status}`);
+    }
 
-      const data = await response.json() as FifaApiResponse;
+    const data = await response.json() as FifaApiResponse;
 
-      // Get current matches from database
-      const matchesSnapshot = await db.ref('matches').once('value');
-      const matches = matchesSnapshot.val() as Record<string, Match> | null;
+    // Get current matches from database
+    const matchesSnapshot = await db.ref('matches').once('value');
+    const matches = matchesSnapshot.val() as Record<string, Match> | null;
 
-      if (!matches) {
-        functions.logger.warn('No matches found in database');
-        return null;
-      }
+    if (!matches) {
+      logger.warn('No matches found in database');
+      return;
+    }
 
-      // Update scores for matching games
-      const updates: Record<string, number> = {};
+    // Update scores for matching games
+    const updates: Record<string, number> = {};
 
-      for (const fifaMatch of data.Results) {
-        for (const [gameId, match] of Object.entries(matches)) {
-          if (match.fifaId === fifaMatch.IdMatch) {
-            const homeScore = fifaMatch.Home?.Score ?? -1;
-            const awayScore = fifaMatch.Away?.Score ?? -1;
+    for (const fifaMatch of data.Results) {
+      for (const [gameId, match] of Object.entries(matches)) {
+        if (match.fifaId === fifaMatch.IdMatch) {
+          const homeScore = fifaMatch.Home?.Score ?? -1;
+          const awayScore = fifaMatch.Away?.Score ?? -1;
 
-            if (match.homeScore !== homeScore && homeScore >= 0) {
-              updates[`matches/${gameId}/homeScore`] = homeScore;
-              functions.logger.info(`Updated game ${gameId} home score: ${homeScore}`);
-            }
+          if (match.homeScore !== homeScore && homeScore >= 0) {
+            updates[`matches/${gameId}/homeScore`] = homeScore;
+            logger.info(`Updated game ${gameId} home score: ${homeScore}`);
+          }
 
-            if (match.awayScore !== awayScore && awayScore >= 0) {
-              updates[`matches/${gameId}/awayScore`] = awayScore;
-              functions.logger.info(`Updated game ${gameId} away score: ${awayScore}`);
-            }
+          if (match.awayScore !== awayScore && awayScore >= 0) {
+            updates[`matches/${gameId}/awayScore`] = awayScore;
+            logger.info(`Updated game ${gameId} away score: ${awayScore}`);
           }
         }
       }
-
-      // Apply all updates at once
-      if (Object.keys(updates).length > 0) {
-        await db.ref().update(updates);
-        functions.logger.info(`Applied ${Object.keys(updates).length} score updates`);
-      }
-
-      return null;
-    } catch (error) {
-      functions.logger.error('Error updating match scores:', error);
-      return null;
     }
-  });
+
+    // Apply all updates at once
+    if (Object.keys(updates).length > 0) {
+      await db.ref().update(updates);
+      logger.info(`Applied ${Object.keys(updates).length} score updates`);
+    }
+  } catch (error) {
+    logger.error('Error updating match scores:', error);
+  }
+});
 
 /**
  * Triggered when a match is updated
  * Recalculates prediction points for all users for that match
  */
-export const updatePredictionPoints = functions.database
-  .ref('matches/{matchId}')
-  .onWrite(async (change, context) => {
-    const matchId = context.params.matchId;
-    const match = change.after.val() as Match | null;
+export const updatePredictionPoints = onValueWritten(
+  'matches/{matchId}',
+  async (event) => {
+    const matchId = event.params.matchId;
+    const match = event.data.after.val() as Match | null;
 
     if (!match) {
-      functions.logger.warn(`Match ${matchId} was deleted`);
-      return null;
+      logger.warn(`Match ${matchId} was deleted`);
+      return;
     }
 
     // Only recalculate if match has scores
     if (match.homeScore < 0 || match.awayScore < 0) {
-      return null;
+      return;
     }
 
-    functions.logger.info(`Updating prediction points for match ${matchId}`);
+    logger.info(`Updating prediction points for match ${matchId}`);
 
     try {
       // Get all users
@@ -174,7 +171,7 @@ export const updatePredictionPoints = functions.database
       const users = usersSnapshot.val() as Record<string, unknown> | null;
 
       if (!users) {
-        return null;
+        return;
       }
 
       const updates: Record<string, number> = {};
@@ -194,7 +191,7 @@ export const updatePredictionPoints = functions.database
 
           if (prediction.points !== points) {
             updates[`predictions/${userId}/${matchId}/points`] = points;
-            functions.logger.info(`User ${userId}: ${points} points for match ${matchId}`);
+            logger.info(`User ${userId}: ${points} points for match ${matchId}`);
           }
         }
       }
@@ -202,35 +199,33 @@ export const updatePredictionPoints = functions.database
       // Apply all updates at once
       if (Object.keys(updates).length > 0) {
         await db.ref().update(updates);
-        functions.logger.info(`Updated ${Object.keys(updates).length} prediction points`);
+        logger.info(`Updated ${Object.keys(updates).length} prediction points`);
       }
-
-      return null;
     } catch (error) {
-      functions.logger.error('Error updating prediction points:', error);
-      return null;
+      logger.error('Error updating prediction points:', error);
     }
-  });
+  }
+);
 
 /**
  * Triggered when prediction points change
  * Updates the user's total score
  */
-export const updateUserScore = functions.database
-  .ref('predictions/{userId}/{matchId}/points')
-  .onWrite(async (change, context) => {
-    const { userId } = context.params;
-    const beforePoints = change.before.val() as number | null ?? 0;
-    const afterPoints = change.after.val() as number | null ?? 0;
+export const updateUserScore = onValueWritten(
+  'predictions/{userId}/{matchId}/points',
+  async (event) => {
+    const { userId } = event.params;
+    const beforePoints = event.data.before.val() as number | null ?? 0;
+    const afterPoints = event.data.after.val() as number | null ?? 0;
 
     // No change in points
     if (beforePoints === afterPoints) {
-      return null;
+      return;
     }
 
     const pointsDiff = afterPoints - beforePoints;
 
-    functions.logger.info(`User ${userId} points changed: ${beforePoints} -> ${afterPoints} (diff: ${pointsDiff})`);
+    logger.info(`User ${userId} points changed: ${beforePoints} -> ${afterPoints} (diff: ${pointsDiff})`);
 
     try {
       const scoreSnapshot = await db.ref(`users/${userId}/score`).once('value');
@@ -238,11 +233,9 @@ export const updateUserScore = functions.database
       const newScore = currentScore + pointsDiff;
 
       await db.ref(`users/${userId}/score`).set(newScore);
-      functions.logger.info(`User ${userId} total score: ${newScore}`);
-
-      return null;
+      logger.info(`User ${userId} total score: ${newScore}`);
     } catch (error) {
-      functions.logger.error('Error updating user score:', error);
-      return null;
+      logger.error('Error updating user score:', error);
     }
-  });
+  }
+);
