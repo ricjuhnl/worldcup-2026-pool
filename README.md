@@ -9,7 +9,8 @@ A betting pool web application for the FIFA World Cup 2026. Built with React, Ty
 - 🏆 Global and private league leaderboards
 - 👥 Create and join private leagues with invite links
 - 📱 PWA support (installable on mobile)
-- 🎯 Points system: exact score (5pts), goal difference (3pts), correct outcome (1pt)
+- 🎯 Points system: exact score (15pts), correct result (max 10pts), wrong result (0pts)
+- ⏰ Prediction deadline: 10 minutes before kickoff
 
 ## Tech Stack
 
