@@ -122,6 +122,10 @@ dist
 # Firebase cache directory
 .firebase/
 
+#Opencode
+.opencode/
+AGENTS.md
+
 # TernJS port file
 .tern-port
 

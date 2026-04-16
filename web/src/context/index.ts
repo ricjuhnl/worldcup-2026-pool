@@ -1,6 +1,6 @@
-export { AuthContext } from './AuthContext';
-export type { AuthContextType } from './AuthContext';
-export { AuthProvider } from './AuthProvider';
+export { UserContext } from './UserContext';
+export type { UserContextType } from './UserContext';
+export { UserProvider, useUser } from './UserContext';
 
 export { MatchContext } from './MatchContext';
 export type { MatchContextType } from './MatchContext';

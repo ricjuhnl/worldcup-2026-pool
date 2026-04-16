@@ -7,6 +7,7 @@ export {
   getUserByUsername,
   handleUserLogin,
   isReservedUsername,
+  normalizeUsername,
   sanitizeUsername,
   subscribeToLeaderboard,
   updateUserProfile,

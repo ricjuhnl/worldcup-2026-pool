@@ -7,7 +7,7 @@ import {
   LinkButton,
   LeaguePicture,
 } from '../components';
-import { useAuth } from '../hooks';
+import { useUser } from '../hooks';
 import {
   checkSlugAvailable,
   createLeague,
@@ -17,7 +17,7 @@ import {
 
 export const NewLeague = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user } = useUser();
   const [saving, setSaving] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
 
@@ -31,7 +31,6 @@ export const NewLeague = () => {
   const [previewUrl, setPreviewUrl] = React.useState<string | null>(null);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
-  // Auto-generate slug from name if user hasn't manually edited it
   const [slugManuallyEdited, setSlugManuallyEdited] = React.useState(false);
 
   React.useEffect(() => {
@@ -40,7 +39,6 @@ export const NewLeague = () => {
     }
   }, [name, slugManuallyEdited]);
 
-  // Check slug availability
   React.useEffect(() => {
     const sanitizedSlug = generateSlug(slugInput);
 
@@ -104,13 +102,11 @@ export const NewLeague = () => {
     setError(null);
 
     try {
-      // Create the league
-      const newLeague = await createLeague(name, user.uid, {
+      const newLeague = await createLeague(name, user.id, {
         slug: finalSlug,
         description: description || undefined,
       });
 
-      // Upload image if selected
       if (selectedFile) {
         await uploadLeagueImage(newLeague.id, selectedFile);
       }
@@ -156,7 +152,6 @@ export const NewLeague = () => {
               onSubmit={(e) => void handleSubmit(e)}
               className="flex flex-col gap-4"
             >
-              {/* League Image */}
               <div className="flex flex-col items-center gap-3">
                 <div className="relative">
                   <LeaguePicture
@@ -191,7 +186,6 @@ export const NewLeague = () => {
                 </label>
               </div>
 
-              {/* League Name */}
               <div>
                 <label htmlFor="name" className={labelClass}>
                   League Name
@@ -207,7 +201,6 @@ export const NewLeague = () => {
                 />
               </div>
 
-              {/* Slug / URL */}
               <div>
                 <label htmlFor="slug" className={labelClass}>
                   URL
@@ -253,7 +246,6 @@ export const NewLeague = () => {
                 </div>
               </div>
 
-              {/* Description */}
               <div>
                 <label htmlFor="description" className={labelClass}>
                   Description
@@ -300,4 +292,3 @@ export const NewLeague = () => {
     </AppLayout>
   );
 };
-

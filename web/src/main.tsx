@@ -3,7 +3,7 @@ import { createRoot } from 'react-dom/client';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import './index.css';
 import { ProtectedRoute } from './components';
-import { AuthProvider, MatchProvider, LeagueProvider, ToastProvider } from './context';
+import { UserProvider, MatchProvider, LeagueProvider, ToastProvider } from './context';
 import {
   About,
   EditLeague,
@@ -13,6 +13,7 @@ import {
   Leaderboard,
   LeagueDetail,
   Leagues,
+  Login,
   NewLeague,
   Rules,
   UserProfile,
@@ -36,7 +37,7 @@ declare global {
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <AuthProvider>
+    <UserProvider>
       <ToastProvider>
         <LeagueProvider>
           <MatchProvider>
@@ -46,6 +47,7 @@ createRoot(document.getElementById('root')!).render(
                 <Route path="/about" element={<About />} />
                 <Route path="/leaderboard" element={<Leaderboard />} />
                 <Route path="/rules" element={<Rules />} />
+                <Route path="/login" element={<Login />} />
                 <Route path="/leagues" element={<Leagues />} />
                 <Route
                   path="/leagues/new"
@@ -82,6 +84,6 @@ createRoot(document.getElementById('root')!).render(
           </MatchProvider>
         </LeagueProvider>
       </ToastProvider>
-    </AuthProvider>
+    </UserProvider>
   </StrictMode>
 );

@@ -9,6 +9,6 @@ export interface MatchContextType {
 
 export const MatchContext = createContext<MatchContextType>({
   matches: null,
-  loading: true,
+  loading: false,
   error: null,
 });

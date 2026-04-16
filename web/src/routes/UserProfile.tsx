@@ -7,7 +7,7 @@ import {
   MatchesHeader,
   UserHeader,
 } from '../components';
-import { useMatches, useAuth } from '../hooks';
+import { useMatches, useUser } from '../hooks';
 import {
   type UserPredictions,
   subscribeToPredictions,
@@ -19,29 +19,25 @@ type ViewMode = 'day' | 'group';
 export const UserProfile = () => {
   const { userName } = useParams();
   const { matches, loading: matchesLoading, error } = useMatches();
-  const { user, userData } = useAuth();
+  const { user } = useUser();
   const [viewMode, setViewMode] = React.useState<ViewMode>('day');
   const [predictions, setPredictions] = React.useState<UserPredictions>({});
   const [profileUserId, setProfileUserId] = React.useState<string | null>(null);
   const [profileLoading, setProfileLoading] = React.useState(true);
 
-  // Determine if viewing own profile
-  const isOwnProfile = userData?.userName === userName;
+  const isOwnProfile = user?.id === userName;
 
-  // Reset state when userName changes to prevent stale data flash
   React.useEffect(() => {
     setProfileLoading(true);
     setProfileUserId(null);
     setPredictions({});
   }, [userName]);
 
-  // Get the user ID for the profile being viewed
   React.useEffect(() => {
     if (isOwnProfile && user) {
-      setProfileUserId(user.uid);
+      setProfileUserId(user.id);
       setProfileLoading(false);
     } else if (userName) {
-      // Fetch the user ID by username for viewing others' profiles
       getUserByUsername(userName)
         .then((profileUser) => {
           setProfileUserId(profileUser?.id ?? null);
@@ -51,7 +47,6 @@ export const UserProfile = () => {
     }
   }, [userName, isOwnProfile, user]);
 
-  // Subscribe to predictions for the profile being viewed
   React.useEffect(() => {
     if (!profileUserId) return;
 

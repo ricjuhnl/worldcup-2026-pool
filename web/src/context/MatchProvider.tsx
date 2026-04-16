@@ -1,6 +1,4 @@
 import React from 'react';
-import { ref, onValue } from 'firebase/database';
-import { db } from '../firebase';
 import { fetchMatches, type MatchesData } from '../services/matchService';
 import { MatchContext } from './MatchContext';
 
@@ -10,47 +8,25 @@ export const MatchProvider: React.FC<{ children: React.ReactNode }> = ({
   const [matches, setMatches] = React.useState<MatchesData | null>(null);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
-  const fetchAttemptedRef = React.useRef(false);
+
+  const loadMatches = async () => {
+    try {
+      const data = await fetchMatches();
+      setMatches(data);
+      setError(null);
+    } catch (err) {
+      console.error('Error fetching matches:', err);
+      setError(err instanceof Error ? err.message : 'Failed to load matches');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   React.useEffect(() => {
-    const matchesRef = ref(db, 'matches');
+    loadMatches();
 
-    // Set up real-time listener
-    const unsubscribe = onValue(
-      matchesRef,
-      (snapshot) => {
-        if (snapshot.exists()) {
-          setMatches(snapshot.val() as MatchesData);
-          setLoading(false);
-        } else if (!fetchAttemptedRef.current) {
-          // No matches exist and we haven't tried fetching yet
-          fetchAttemptedRef.current = true;
-          fetchMatches()
-            .then((data) => {
-              setMatches(data);
-            })
-            .catch((err: unknown) => {
-              console.error('Error fetching matches:', err);
-              setError(
-                err instanceof Error ? err.message : 'Failed to load matches'
-              );
-            })
-            .finally(() => {
-              setLoading(false);
-            });
-        } else {
-          // Already attempted fetch, just stop loading
-          setLoading(false);
-        }
-      },
-      (err) => {
-        console.error('Error listening to matches:', err);
-        setError(err.message);
-        setLoading(false);
-      }
-    );
-
-    return () => unsubscribe();
+    const interval = setInterval(loadMatches, 30000);
+    return () => clearInterval(interval);
   }, []);
 
   const value = {

@@ -7,7 +7,7 @@ import {
   LinkButton,
   LeaguePicture,
 } from '../components';
-import { useAuth, useLeague } from '../hooks';
+import { useUser, useLeague } from '../hooks';
 import appIcon from '/app-icon.png';
 import {
   subscribeToUserLeagues,
@@ -18,7 +18,7 @@ import {
 
 export const Leagues = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user } = useUser();
   const { setSelectedLeague } = useLeague();
   const [leagues, setLeagues] = React.useState<LeagueWithId[]>([]);
   const [loading, setLoading] = React.useState(true);
@@ -33,7 +33,7 @@ export const Leagues = () => {
       return;
     }
 
-    const unsubscribe = subscribeToUserLeagues(user.uid, (userLeagues) => {
+    const unsubscribe = subscribeToUserLeagues(user.id, (userLeagues) => {
       setLeagues(userLeagues);
       setLoading(false);
     });
@@ -55,7 +55,7 @@ export const Leagues = () => {
         return;
       }
 
-      await joinLeague(league.id, user.uid);
+      await joinLeague(league.id, user.id);
       setSelectedLeague(league);
       setInviteCode('');
       setShowJoin(false);
@@ -93,7 +93,6 @@ export const Leagues = () => {
           </Card>
         )}
 
-        {/* Join League Modal */}
         {showJoin && (
           <Card className="p-6 mb-6">
             <h2 className="text-xl font-semibold text-white mb-4">
@@ -134,12 +133,10 @@ export const Leagues = () => {
           </Card>
         )}
 
-        {/* Leagues List */}
         {loading ? (
           <div className="text-center text-white/70 py-20">Loading...</div>
         ) : (
           <div className="space-y-3">
-            {/* Global League */}
             <button
               onClick={() => {
                 void setSelectedLeague(null);
@@ -165,7 +162,6 @@ export const Leagues = () => {
               </Card>
             </button>
 
-            {/* No leagues message */}
             {leagues.length === 0 && user && (
               <Card className="p-6 text-center">
                 <p className="text-white/70 mb-4">
@@ -177,7 +173,6 @@ export const Leagues = () => {
               </Card>
             )}
 
-            {/* User's Leagues */}
             {leagues.map((league) => (
               <button
                 key={league.id}
@@ -200,8 +195,8 @@ export const Leagues = () => {
                         {league.name}
                       </h3>
                       <p className="text-white/50 text-sm">
-                        {league.memberCount}{' '}
-                        {league.memberCount === 1 ? 'member' : 'members'}
+                        {league.member_count || 0}{' '}
+                        {league.member_count === 1 ? 'member' : 'members'}
                       </p>
                     </div>
                     <span className="text-white/30">→</span>

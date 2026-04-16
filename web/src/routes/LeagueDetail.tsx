@@ -10,21 +10,19 @@ import {
   LeaguePicture,
   useConfirm,
 } from '../components';
-import { useAuth, useLeague, useToast } from '../hooks';
+import { useUser, useLeague, useToast } from '../hooks';
 import {
   getLeagueBySlug,
   isLeagueMember,
   leaveLeague,
-  regenerateInviteCode,
   subscribeToLeaderboard,
-  subscribeToLeagueMembers,
   type LeagueWithId,
   type UserWithId,
 } from '../services';
 
 export const LeagueDetail = () => {
   const { slug } = useParams();
-  const { user, userData } = useAuth();
+  const { user } = useUser();
   const { setSelectedLeague } = useLeague();
   const navigate = useNavigate();
   const { showConfirm, ConfirmDialogComponent } = useConfirm();
@@ -34,14 +32,11 @@ export const LeagueDetail = () => {
   const [loading, setLoading] = React.useState(true);
   const [isMember, setIsMember] = React.useState(false);
   const [showInviteCode, setShowInviteCode] = React.useState(false);
-  const [leaving, setLeaving] = React.useState(false);
   const [accessChecked, setAccessChecked] = React.useState(false);
 
-  const isOwner = user && league?.ownerId === user.uid;
-  const isAdmin = userData?.admin === true;
-  const canManageMembers = isOwner || isAdmin;
+  const isOwner = user && league?.owner_id === user.id;
+  const canManageMembers = isOwner;
 
-  // Load league data
   React.useEffect(() => {
     if (!slug) return;
 
@@ -52,14 +47,12 @@ export const LeagueDetail = () => {
       setLeague(leagueData);
 
       if (leagueData && user) {
-        const memberStatus = await isLeagueMember(leagueData.id, user.uid);
+        const memberStatus = await isLeagueMember(leagueData.id, user.id);
         setIsMember(memberStatus);
         setAccessChecked(true);
       } else if (leagueData && !user) {
-        // Not logged in - mark as checked (will redirect)
         setAccessChecked(true);
       } else {
-        // League not found - mark as checked
         setAccessChecked(true);
       }
 
@@ -69,20 +62,16 @@ export const LeagueDetail = () => {
     void loadLeague();
   }, [slug, user]);
 
-  // Redirect non-members to /leagues
   React.useEffect(() => {
     if (loading || !accessChecked) return;
 
-    // League not found is handled by the render below
     if (!league) return;
 
-    // Not logged in or not a member - redirect
     if (!user || !isMember) {
       void navigate('/leagues', { replace: true });
     }
   }, [loading, accessChecked, league, user, isMember, navigate]);
 
-  // Subscribe to league members and leaderboard (real-time updates)
   React.useEffect(() => {
     if (!league) return;
 
@@ -92,26 +81,17 @@ export const LeagueDetail = () => {
     const updateMembers = () => {
       const leagueMembers = allUsers.filter((u) => memberIds.includes(u.id));
       setMembers(leagueMembers);
-      // Update isMember status reactively
       if (user) {
-        setIsMember(memberIds.includes(user.uid));
+        setIsMember(memberIds.includes(user.id));
       }
     };
 
-    // Subscribe to league members
-    const unsubscribeMembers = subscribeToLeagueMembers(league.id, (ids) => {
-      memberIds = ids;
-      updateMembers();
-    });
-
-    // Subscribe to leaderboard
     const unsubscribeLeaderboard = subscribeToLeaderboard((users) => {
       allUsers = users;
       updateMembers();
     });
 
     return () => {
-      unsubscribeMembers();
       unsubscribeLeaderboard();
     };
   }, [league, user]);
@@ -127,32 +107,10 @@ export const LeagueDetail = () => {
 
     if (!confirmed) return;
 
-    setLeaving(true);
     try {
-      await leaveLeague(league.id, user.uid);
+      await leaveLeague(league.id, user.id);
       setSelectedLeague(null);
       window.location.href = '/leagues';
-    } catch (err) {
-      console.error(err);
-      setLeaving(false);
-    }
-  };
-
-  const handleRegenerateCode = async () => {
-    if (!league || !isOwner) return;
-
-    const confirmed = await showConfirm({
-      title: 'Regenerate Invite Code',
-      message:
-        "This will invalidate the old invite code. Anyone with the old link won't be able to join.",
-      confirmText: 'Regenerate',
-    });
-
-    if (!confirmed) return;
-
-    try {
-      const newCode = await regenerateInviteCode(league.id);
-      setLeague({ ...league, inviteCode: newCode });
     } catch (err) {
       console.error(err);
     }
@@ -161,8 +119,7 @@ export const LeagueDetail = () => {
   const handleRemoveMember = async (userId: string, displayName: string) => {
     if (!league || !canManageMembers) return;
 
-    // Don't allow removing the owner
-    if (userId === league.ownerId) {
+    if (userId === league.owner_id) {
       showToast("Can't remove the league owner", 'error');
       return;
     }
@@ -186,7 +143,7 @@ export const LeagueDetail = () => {
 
   const getShareableLink = () => {
     if (!league) return '';
-    return `${window.location.origin}/league/${league.slug}/join/${league.inviteCode}`;
+    return `${window.location.origin}/league/${league.slug}/join/${league.invite_code}`;
   };
 
   const copyShareableLink = () => {
@@ -204,7 +161,6 @@ export const LeagueDetail = () => {
     );
   }
 
-  // Don't render if redirecting (not logged in or not a member)
   if (!user || !isMember) {
     return (
       <AppLayout>
@@ -236,7 +192,6 @@ export const LeagueDetail = () => {
     <AppLayout>
       {ConfirmDialogComponent}
       <div className="pt-8 px-4 pb-8 max-w-2xl mx-auto">
-        {/* Header */}
         <div className="mb-6">
           <div className="flex items-center justify-between mb-2">
             <Link
@@ -248,10 +203,10 @@ export const LeagueDetail = () => {
             {isMember && !isOwner && (
               <Button
                 onClick={() => void handleLeave()}
-                disabled={leaving}
+                disabled={false}
                 className="text-xs"
               >
-                {leaving ? 'Leaving...' : 'Leave'}
+                Leave
               </Button>
             )}
             {isOwner && (
@@ -277,7 +232,6 @@ export const LeagueDetail = () => {
           </div>
         </div>
 
-        {/* Invite Section (owner only) */}
         {isOwner && (
           <Card className="p-4 mb-6 overflow-hidden">
             <div className="flex items-center justify-between">
@@ -296,7 +250,6 @@ export const LeagueDetail = () => {
             </div>
             {showInviteCode && (
               <div className="mt-4 space-y-4">
-                {/* Link and Copy */}
                 <div className="space-y-2">
                   <div className="overflow-hidden bg-white/10 px-4 py-3 rounded-lg">
                     <code className="text-sm font-mono text-white/70 block truncate">
@@ -310,7 +263,6 @@ export const LeagueDetail = () => {
                     Copy Link
                   </Button>
                 </div>
-                {/* QR Code */}
                 <div className="flex flex-col items-center gap-3 pt-3 border-t border-white/10">
                   <p className="text-white/50 text-sm">Scan to join</p>
                   <div
@@ -343,29 +295,19 @@ export const LeagueDetail = () => {
                     Download QR
                   </Button>
                 </div>
-                {/* Invite Code */}
                 <div className="flex items-center justify-between pt-3 border-t border-white/10">
                   <span className="text-white/50 text-sm">
                     Code:{' '}
                     <span className="font-mono text-white">
-                      {league.inviteCode}
+                      {league.invite_code}
                     </span>
                   </span>
-                  {isOwner && (
-                    <Button
-                      onClick={() => void handleRegenerateCode()}
-                      className="text-sm"
-                    >
-                      Regenerate
-                    </Button>
-                  )}
                 </div>
               </div>
             )}
           </Card>
         )}
 
-        {/* Leaderboard */}
         {members.length > 0 && (
           <div className="mt-10">
             <LeaderboardList

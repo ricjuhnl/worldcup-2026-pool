@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { useAuth, useLeague } from '../../hooks';
+import { useUser, useLeague } from '../../hooks';
 import { subscribeToLeaderboard, type UserWithId } from '../../services';
 import { getPositionCompact } from '../../utils';
 import { Card, ProfilePicture } from '../ui';
@@ -35,7 +35,7 @@ const UserRow = ({
     }`}
   >
     <Link
-      to={`/${user.userName}`}
+      to={`/${user.id}`}
       className="flex items-center gap-2 flex-1 min-w-0"
     >
       <span
@@ -45,17 +45,17 @@ const UserRow = ({
       </span>
       <ProfilePicture
         src={user.photoURL}
-        name={user.displayName}
+        name={user.display_name}
         size={compact ? 'xs' : 'sm'}
       />
       <div className="flex-1 min-w-0">
         <div
           className={`text-white truncate ${compact ? 'text-sm' : 'font-medium'}`}
         >
-          {user.displayName}
+          {user.display_name}
         </div>
         {!compact && (
-          <div className="text-white/50 text-sm">@{user.userName}</div>
+          <div className="text-white/50 text-sm">@{user.id}</div>
         )}
       </div>
       <span
@@ -82,7 +82,7 @@ export const LeaderboardList = ({
   users: externalUsers,
   onRemoveMember,
 }: LeaderboardProps) => {
-  const { user: currentUser } = useAuth();
+  const { user: currentUser } = useUser();
   const { leagues, selectedLeague, setSelectedLeague, leagueMemberIds } =
     useLeague();
   const location = useLocation();
@@ -245,11 +245,11 @@ export const LeaderboardList = ({
                 key={user.id}
                 user={user}
                 position={index + 1}
-                isCurrentUser={currentUser?.uid === user.id}
+                isCurrentUser={currentUser?.id === user.id}
                 compact
                 onRemove={
                   onRemoveMember
-                    ? () => onRemoveMember(user.id, user.displayName)
+                    ? () => onRemoveMember(user.id, user.display_name)
                     : undefined
                 }
               />
@@ -265,11 +265,11 @@ export const LeaderboardList = ({
                 key={user.id}
                 user={user}
                 position={users.length >= 3 ? index + 4 : index + 1}
-                isCurrentUser={currentUser?.uid === user.id}
+                isCurrentUser={currentUser?.id === user.id}
                 compact={false}
                 onRemove={
                   onRemoveMember
-                    ? () => onRemoveMember(user.id, user.displayName)
+                    ? () => onRemoveMember(user.id, user.display_name)
                     : undefined
                 }
               />

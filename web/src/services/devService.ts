@@ -1,10 +1,10 @@
-import { db } from '../firebase';
-import { ref, set, get, remove } from 'firebase/database';
+import axios from 'axios';
 import type { UserData } from './userService';
 import type { MatchesData } from './matchService';
-import type { Prediction } from './predictionService';
+import { fetchMatches } from './matchService';
 
-// [firstName, lastName]
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+
 const MOCK_NAMES: [string, string][] = [
   ['James', 'Hetfield'],
   ['Dave', 'Mustaine'],
@@ -33,65 +33,43 @@ const MOCK_NAMES: [string, string][] = [
 ];
 
 const generateMockUser = (index: number, timestamp: number): UserData => {
-  // Scramble: random first name + random last name from different entries
   const [firstName] = MOCK_NAMES[Math.floor(Math.random() * MOCK_NAMES.length)];
   const [, lastName] =
     MOCK_NAMES[Math.floor(Math.random() * MOCK_NAMES.length)];
-  const displayName = `${firstName} ${lastName}`;
-  const userName = `${firstName.toLowerCase()}${lastName.toLowerCase()}${index}`;
-
-  // Generate consistent avatar using pravatar.cc with unique seed
-  const avatarSeed = `${timestamp}_${index}`;
-  const photoURL = `https://i.pravatar.cc/150?u=${avatarSeed}`;
+  const display_name = `${firstName} ${lastName}`;
+  const id = `${firstName.toLowerCase()}${lastName.toLowerCase()}${index}`;
 
   return {
-    email: `${userName}@mock.test`,
-    displayName,
-    userName,
-    photoURL,
-    score: 0, // Cloud function will calculate based on predictions
-    admin: false,
+    id,
+    display_name,
+    avatar_initials: display_name.slice(0, 2).toUpperCase(),
+    score: 0,
+    is_admin: 0,
+    created_at: timestamp,
   };
 };
 
-/**
- * Generate random predictions for a user
- */
 const generatePredictionsForUser = async (
   userId: string,
   matches: MatchesData
 ): Promise<number> => {
   const matchIds = Object.keys(matches);
-  const now = Date.now();
 
-  // Build all predictions as a single update object
-  const updates: Record<string, Prediction> = {};
   for (const matchId of matchIds) {
-    updates[matchId] = {
+    const gameId = parseInt(matchId, 10);
+    await axios.post(`${API_BASE_URL}/predictions`, {
+      userId,
+      game: gameId,
       homePrediction: Math.floor(Math.random() * 6),
       awayPrediction: Math.floor(Math.random() * 6),
-      points: 0, // Cloud function will calculate
-      updatedAt: now,
-    };
+    });
   }
-
-  // Single atomic write for all predictions
-  await set(ref(db, `predictions/${userId}`), updates);
 
   return matchIds.length;
 };
 
-/**
- * Generate mock users with random predictions
- */
 export const generateMockUsers = async (count: number): Promise<number> => {
-  // Get all matches for predictions
-  const matchesRef = ref(db, 'matches');
-  const matchesSnapshot = await get(matchesRef);
-  const matches = matchesSnapshot.exists()
-    ? (matchesSnapshot.val() as MatchesData)
-    : null;
-
+  const matches = await fetchMatches();
   const timestamp = Date.now();
   let created = 0;
 
@@ -99,62 +77,51 @@ export const generateMockUsers = async (count: number): Promise<number> => {
     const mockId = `mock_${timestamp}_${i}`;
     const userData = generateMockUser(i, timestamp);
 
-    // Create user
-    await set(ref(db, `users/${mockId}`), {
-      ...userData,
-      mock: true, // Flag to identify mock data
-    });
+    try {
+      await axios.post(`${API_BASE_URL}/users`, {
+        username: userData.id,
+        displayName: userData.display_name,
+      });
 
-    // Claim username
-    await set(ref(db, `usernames/${userData.userName}`), mockId);
+      if (matches) {
+        await generatePredictionsForUser(mockId, matches);
+      }
 
-    // Generate predictions if matches exist
-    if (matches) {
-      await generatePredictionsForUser(mockId, matches);
+      created++;
+    } catch (error) {
+      console.error(`Failed to create mock user ${userData.id}:`, error);
     }
-
-    created++;
   }
 
   return created;
 };
 
-/**
- * Remove all mock users from the database (including predictions)
- */
 export const clearMockUsers = async (): Promise<number> => {
-  const usersRef = ref(db, 'users');
-  const snapshot = await get(usersRef);
+  try {
+    const response = await axios.get(`${API_BASE_URL}/users`);
+    const users: UserData[] = response.data;
+    let removed = 0;
 
-  if (!snapshot.exists()) return 0;
-
-  const users = snapshot.val() as Record<string, UserData & { mock?: boolean }>;
-  let removed = 0;
-
-  for (const [uid, user] of Object.entries(users)) {
-    if (user.mock) {
-      // Remove user
-      await remove(ref(db, `users/${uid}`));
-      // Remove username claim
-      await remove(ref(db, `usernames/${user.userName}`));
-      // Remove predictions
-      await remove(ref(db, `predictions/${uid}`));
-      removed++;
+    for (const user of users) {
+      if (user.id.includes('mock_') || user.id.match(/\d+$/)) {
+        await axios.delete(`${API_BASE_URL}/users/${user.id}`);
+        removed++;
+      }
     }
-  }
 
-  return removed;
+    return removed;
+  } catch (error) {
+    console.error('Error clearing mock users:', error);
+    return 0;
+  }
 };
 
-/**
- * Get count of mock users
- */
 export const getMockUserCount = async (): Promise<number> => {
-  const usersRef = ref(db, 'users');
-  const snapshot = await get(usersRef);
-
-  if (!snapshot.exists()) return 0;
-
-  const users = snapshot.val() as Record<string, UserData & { mock?: boolean }>;
-  return Object.values(users).filter((u) => u.mock).length;
+  try {
+    const response = await axios.get(`${API_BASE_URL}/users`);
+    const users: UserData[] = response.data;
+    return users.filter((u) => u.id.includes('mock_') || u.id.match(/\d+$/)).length;
+  } catch {
+    return 0;
+  }
 };

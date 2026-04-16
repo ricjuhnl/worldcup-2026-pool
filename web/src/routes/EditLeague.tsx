@@ -8,7 +8,7 @@ import {
   LeaguePicture,
   useConfirm,
 } from '../components';
-import { useAuth, useToast } from '../hooks';
+import { useUser, useToast } from '../hooks';
 import {
   checkSlugAvailable,
   deleteLeague,
@@ -22,7 +22,7 @@ import {
 export const EditLeague = () => {
   const { slug } = useParams();
   const navigate = useNavigate();
-  const { user, userData } = useAuth();
+  const { user } = useUser();
   const { showConfirm, ConfirmDialogComponent } = useConfirm();
   const { showToast } = useToast();
   const [league, setLeague] = React.useState<LeagueWithId | null>(null);
@@ -42,9 +42,8 @@ export const EditLeague = () => {
   const [previewUrl, setPreviewUrl] = React.useState<string | null>(null);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
-  const isOwner = user && league?.ownerId === user.uid;
-  const isAdmin = userData?.admin === true;
-  const canDelete = isOwner || isAdmin;
+  const isOwner = user && league?.owner_id === user.id;
+  const canDelete = isOwner;
 
   const handleDelete = async () => {
     if (!league || !canDelete) return;
@@ -59,7 +58,7 @@ export const EditLeague = () => {
 
     setDeleting(true);
     try {
-      await deleteLeague(league.id, league.slug);
+      await deleteLeague(league.id);
       showToast('League deleted successfully');
       void navigate('/leagues', { replace: true });
     } catch (err) {
@@ -69,7 +68,6 @@ export const EditLeague = () => {
     }
   };
 
-  // Load league data
   React.useEffect(() => {
     if (!slug) return;
 
@@ -91,17 +89,14 @@ export const EditLeague = () => {
     void loadLeague();
   }, [slug]);
 
-  // Check slug availability
   React.useEffect(() => {
     const sanitizedSlug = generateSlug(slugInput);
 
-    // If slug is empty or same as original, don't check
     if (!sanitizedSlug || sanitizedSlug === originalSlug) {
       setSlugStatus('idle');
       return;
     }
 
-    // Validate slug format
     if (sanitizedSlug.length < 2) {
       setSlugStatus('invalid');
       return;
@@ -159,7 +154,6 @@ export const EditLeague = () => {
     try {
       let newImageURL = league.imageURL ?? '';
 
-      // Upload new image if selected
       if (selectedFile) {
         newImageURL = await uploadLeagueImage(league.id, selectedFile);
       }
@@ -170,9 +164,7 @@ export const EditLeague = () => {
           name,
           description,
           imageURL: newImageURL,
-          slug: finalSlug,
-        },
-        originalSlug
+        }
       );
 
       void navigate(`/league/${finalSlug}`);
@@ -249,7 +241,6 @@ export const EditLeague = () => {
               onSubmit={(e) => void handleSubmit(e)}
               className="flex flex-col gap-4"
             >
-              {/* League Image */}
               <div className="flex flex-col items-center gap-3">
                 <div className="relative">
                   <LeaguePicture
@@ -284,7 +275,6 @@ export const EditLeague = () => {
                 </label>
               </div>
 
-              {/* League Name */}
               <div>
                 <label htmlFor="name" className={labelClass}>
                   League Name
@@ -300,7 +290,6 @@ export const EditLeague = () => {
                 />
               </div>
 
-              {/* Slug / URL */}
               <div>
                 <label htmlFor="slug" className={labelClass}>
                   URL
@@ -345,7 +334,6 @@ export const EditLeague = () => {
                 </div>
               </div>
 
-              {/* Description */}
               <div>
                 <label htmlFor="description" className={labelClass}>
                   Description
@@ -387,7 +375,6 @@ export const EditLeague = () => {
                 </Button>
               </div>
 
-              {/* Delete option */}
               {canDelete && (
                 <div className="mt-6 pt-4 border-t border-white/10 text-center">
                   <button
@@ -401,8 +388,8 @@ export const EditLeague = () => {
                 </div>
               )}
             </form>
+            {ConfirmDialogComponent}
           </Card>
-          {ConfirmDialogComponent}
         </div>
       </div>
     </AppLayout>

@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link, NavLink } from 'react-router-dom';
 import { bgImage, worldcupLogo } from '../../assets';
-import { useAuth, useLeague } from '../../hooks';
+import { useUser, useLeague } from '../../hooks';
 import { DevToolsPanel } from './DevToolsPanel';
 import { LeaguePicture } from './LeaguePicture';
 import { Sidebar } from './Sidebar';
@@ -13,20 +13,19 @@ type AppLayoutProps = {
 };
 
 export const AppLayout = ({ children, className = '' }: AppLayoutProps) => {
-  const { userData } = useAuth();
+  const { user } = useUser();
   const { selectedLeague } = useLeague();
 
   const mobileNavItems = [
     {
-      to: userData ? `/${userData.userName}` : '/',
+      to: user ? `/${user.id}` : '/',
       icon: '⚽',
-      label: userData ? 'My Predictions' : 'All Matches',
+      label: user ? 'My Predictions' : 'All Matches',
     },
     { to: '/leaderboard', icon: '🥇', label: 'Leaderboard' },
     { to: '/leagues', icon: '🏆', label: 'Leagues' },
   ];
 
-  // Fallback: hide splash after 1 second (for pages without data loading)
   React.useEffect(() => {
     const timer = setTimeout(() => {
       window.hideSplash?.();
@@ -36,23 +35,18 @@ export const AppLayout = ({ children, className = '' }: AppLayoutProps) => {
 
   return (
     <>
-      {/* Fixed background */}
       <div
         className="fixed inset-0 bg-cover bg-center bg-no-repeat -z-10"
         style={{
           backgroundImage: `linear-gradient(to bottom, black, transparent 30%, transparent 70%, black), url(${bgImage})`,
         }}
       />
-      {/* Layout container */}
       <div className="flex min-h-screen text-white">
-        {/* Desktop sidebar */}
         <div className="hidden md:block">
           <Sidebar />
         </div>
 
-        {/* Mobile header + content */}
         <div className="flex-1 flex flex-col md:block">
-          {/* Mobile header */}
           <header
             className="md:hidden sticky top-0 z-20 bg-black/80 backdrop-blur-lg border-b border-white/10 px-4 py-0"
             style={{ paddingTop: 'calc(env(safe-area-inset-top) + 0.75rem)' }}
@@ -94,7 +88,6 @@ export const AppLayout = ({ children, className = '' }: AppLayoutProps) => {
             {children}
           </main>
 
-          {/* Mobile bottom navigation */}
           <nav
             className="md:hidden fixed bottom-0 left-0 right-0 z-20 bg-black/90 backdrop-blur-lg border-t border-white/10"
             style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
@@ -122,7 +115,6 @@ export const AppLayout = ({ children, className = '' }: AppLayoutProps) => {
         </div>
       </div>
 
-      {/* Dev Tools (only in dev mode for admins) */}
       <DevToolsPanel />
     </>
   );

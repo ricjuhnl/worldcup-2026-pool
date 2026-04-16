@@ -1,5 +1,5 @@
 import React from 'react';
-import { useAuth } from '../../hooks';
+import { useUser } from '../../hooks';
 import {
   generateMockUsers,
   clearMockUsers,
@@ -9,14 +9,13 @@ import { Button } from '../ui/Button';
 import { useToast } from '../../hooks';
 
 export const DevToolsPanel = () => {
-  const { userData } = useAuth();
+  const { user } = useUser();
   const { showToast } = useToast();
   const [isOpen, setIsOpen] = React.useState(false);
   const [loading, setLoading] = React.useState<string | null>(null);
   const [mockCount, setMockCount] = React.useState(0);
 
-  // Only show in dev mode AND for admin users
-  const shouldShow = import.meta.env.DEV && userData?.admin;
+  const shouldShow = import.meta.env.DEV && user?.is_admin;
 
   // Load mock user count on open
   React.useEffect(() => {

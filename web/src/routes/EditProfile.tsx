@@ -1,7 +1,5 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { signOut } from 'firebase/auth';
-import { auth } from '../firebase';
 import {
   AppLayout,
   Card,
@@ -10,7 +8,7 @@ import {
   ProfilePicture,
   useConfirm,
 } from '../components';
-import { useAuth } from '../hooks/useAuth';
+import { useUser } from '../context';
 import { useToast } from '../hooks/useToast';
 import {
   checkUsernameAvailable,
@@ -18,18 +16,16 @@ import {
   getLeaguesOwnedByUser,
   isReservedUsername,
   sanitizeUsername,
-  updateUserProfile,
-  uploadProfilePicture,
 } from '../services';
 
 export const EditProfile = () => {
   const navigate = useNavigate();
-  const { user, userData, setUserData } = useAuth();
+  const { user, updateUser } = useUser();
   const { showToast } = useToast();
   const { showConfirm, ConfirmDialogComponent } = useConfirm();
-  const [userName, setUserName] = React.useState(userData?.userName ?? '');
+  const [userName, setUserName] = React.useState(user?.id ?? '');
   const [displayName, setDisplayName] = React.useState(
-    userData?.displayName ?? ''
+    user?.display_name ?? ''
   );
   const [saving, setSaving] = React.useState(false);
   const [deleting, setDeleting] = React.useState(false);
@@ -37,46 +33,14 @@ export const EditProfile = () => {
   const [usernameStatus, setUsernameStatus] = React.useState<
     'idle' | 'checking' | 'available' | 'taken' | 'reserved'
   >('idle');
-  const [selectedFile, setSelectedFile] = React.useState<File | null>(null);
-  const [previewUrl, setPreviewUrl] = React.useState<string | null>(null);
-  const fileInputRef = React.useRef<HTMLInputElement>(null);
 
-  const originalUserName = userData?.userName ?? '';
+  const originalUserName = user?.id ?? '';
 
-  // Sync form state when userData changes (e.g., new user signs in)
   React.useEffect(() => {
-    setUserName(userData?.userName ?? '');
-    setDisplayName(userData?.displayName ?? '');
-  }, [userData?.userName, userData?.displayName]);
+    setUserName(user?.id ?? '');
+    setDisplayName(user?.display_name ?? '');
+  }, [user?.id, user?.display_name]);
 
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      // Validate file type
-      if (!file.type.startsWith('image/')) {
-        setError('Please select an image file');
-        return;
-      }
-      // Validate file size (max 5MB)
-      if (file.size > 5 * 1024 * 1024) {
-        setError('Image must be less than 5MB');
-        return;
-      }
-      setSelectedFile(file);
-      setPreviewUrl(URL.createObjectURL(file));
-      setError(null);
-    }
-  };
-
-  const handleRemovePhoto = () => {
-    setSelectedFile(null);
-    setPreviewUrl(null);
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
-    }
-  };
-
-  // Debounced username availability check
   React.useEffect(() => {
     if (userName === originalUserName) {
       setUsernameStatus('idle');
@@ -88,7 +52,6 @@ export const EditProfile = () => {
       return;
     }
 
-    // Check reserved immediately (no network call needed)
     if (isReservedUsername(userName)) {
       setUsernameStatus('reserved');
       return;
@@ -97,7 +60,7 @@ export const EditProfile = () => {
     setUsernameStatus('checking');
 
     const timeoutId = setTimeout(() => {
-      checkUsernameAvailable(userName, user?.uid)
+      checkUsernameAvailable(userName)
         .then((available) => {
           setUsernameStatus(available ? 'available' : 'taken');
         })
@@ -107,41 +70,24 @@ export const EditProfile = () => {
     }, 500);
 
     return () => clearTimeout(timeoutId);
-  }, [userName, originalUserName, user?.uid]);
+  }, [userName, originalUserName]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
     if (usernameStatus === 'taken' || usernameStatus === 'reserved') return;
 
-    // Sanitize username before saving (removes trailing dots)
     const finalUserName = sanitizeUsername(userName);
 
     setSaving(true);
     setError(null);
 
     try {
-      let newPhotoURL = userData?.photoURL ?? '';
+      await updateUser({
+        id: finalUserName,
+        display_name: displayName,
+      });
 
-      // Upload new profile picture if selected
-      if (selectedFile) {
-        newPhotoURL = await uploadProfilePicture(user.uid, selectedFile);
-      }
-
-      await updateUserProfile(
-        user.uid,
-        { userName: finalUserName, displayName },
-        originalUserName
-      );
-
-      if (userData) {
-        setUserData({
-          ...userData,
-          userName: finalUserName,
-          displayName,
-          photoURL: newPhotoURL,
-        });
-      }
       void navigate(`/${finalUserName}`);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Failed to update profile');
@@ -150,10 +96,9 @@ export const EditProfile = () => {
   };
 
   const handleDeleteAccount = async () => {
-    if (!user || !userData) return;
+    if (!user) return;
 
-    // Check if user owns any leagues
-    const ownedLeagues = await getLeaguesOwnedByUser(user.uid);
+    const ownedLeagues = await getLeaguesOwnedByUser(user.id);
     if (ownedLeagues.length > 0) {
       const leagueNames = ownedLeagues.map((l) => l.name).join(', ');
       showToast(
@@ -174,8 +119,7 @@ export const EditProfile = () => {
 
     setDeleting(true);
     try {
-      await deleteUserAccount(user.uid, userData.userName);
-      await signOut(auth);
+      await deleteUserAccount(user.id);
       showToast('Account deleted successfully', 'success');
       void navigate('/', { replace: true });
     } catch (err) {
@@ -208,39 +152,17 @@ export const EditProfile = () => {
               onSubmit={(e) => void handleSubmit(e)}
               className="flex flex-col gap-4"
             >
-              {/* Profile Picture */}
               <div className="flex flex-col items-center gap-3">
                 <div className="relative">
                   <ProfilePicture
-                    src={previewUrl ?? userData?.photoURL}
-                    name={userData?.displayName}
+                    name={displayName || userName}
                     size="xl"
                     className="border-2 border-white/20"
                   />
-                  {previewUrl && (
-                    <Button
-                      onClick={handleRemovePhoto}
-                      className="absolute px-0! -top-1 -right-1 rounded-full w-8 h-8 backdrop-blur-lg border-none opacity-70 hover:opacity-100"
-                      title="Undo"
-                    >
-                      <span className="text-sm">↩️</span>
-                    </Button>
-                  )}
                 </div>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*"
-                  onChange={handleFileSelect}
-                  className="hidden"
-                  id="photo-upload"
-                />
-                <label
-                  htmlFor="photo-upload"
-                  className="text-sm text-white/60 hover:text-white cursor-pointer transition-colors"
-                >
-                  Change Photo
-                </label>
+                <p className="text-sm text-white/60">
+                  Your avatar is generated from your display name
+                </p>
               </div>
 
               <div>
@@ -314,7 +236,7 @@ export const EditProfile = () => {
 
               <div className="flex gap-3 mt-4">
                 <LinkButton
-                  to={`/${userData?.userName ?? ''}`}
+                  to={`/${userName ?? ''}`}
                   variant="secondary"
                   className="flex-1"
                 >
@@ -336,7 +258,6 @@ export const EditProfile = () => {
                 </Button>
               </div>
 
-              {/* Delete Account */}
               <div className="mt-6 pt-6 border-t border-white/10 text-center">
                 <button
                   type="button"

@@ -60,14 +60,14 @@ export const UserHeader = ({ userId, className = '' }: UserHeaderProps) => {
     <div className={`flex items-center gap-4 ${className}`}>
       <ProfilePicture
         src={user.photoURL}
-        name={user.displayName}
+        name={user.display_name}
         size="md"
         className="border-2 border-white/20"
       />
       <div className="flex flex-col items-start text-left flex-1">
-        <h1 className="text-2xl font-bold text-white">{user.displayName}</h1>
+        <h1 className="text-2xl font-bold text-white">{user.display_name}</h1>
         <div className="flex items-center gap-3 text-white/70 text-sm flex-wrap">
-          <span>@{user.userName}</span>
+          <span>@{user.id}</span>
           <span>·</span>
           <span>{user.score} pts</span>
           {position !== null && (

@@ -1,11 +1,7 @@
 import React from 'react';
 import { createPortal } from 'react-dom';
-import { signInWithPopup, signOut } from 'firebase/auth';
 import { useNavigate, Link } from 'react-router-dom';
-import { auth, googleProvider } from '../../firebase';
-import { sidebarMenuBg } from '../../assets';
-import { useAuth } from '../../hooks/useAuth';
-import { useLeague } from '../../hooks/useLeague';
+import { useUser, useLeague } from '../../hooks';
 import { subscribeToLeaderboard, type UserWithId } from '../../services';
 import { getPositionCompact } from '../../utils';
 import { Button, ProfilePicture } from '../ui';
@@ -21,15 +17,13 @@ type UserMenuProps = {
 
 export const UserMenu = ({ mobile = false }: UserMenuProps) => {
   const navigate = useNavigate();
-  const { user, userData } = useAuth();
+  const { user } = useUser();
   const { selectedLeague, leagueMemberIds } = useLeague();
   const [isOpen, setIsOpen] = React.useState(false);
   const [allUsers, setAllUsers] = React.useState<UserWithId[]>([]);
   const buttonRef = React.useRef<HTMLDivElement>(null);
   const dropdownRef = React.useRef<HTMLUListElement>(null);
-  const justSignedIn = React.useRef(false);
 
-  // Subscribe to leaderboard
   React.useEffect(() => {
     const unsubscribe = subscribeToLeaderboard((users) => {
       setAllUsers(users);
@@ -37,7 +31,6 @@ export const UserMenu = ({ mobile = false }: UserMenuProps) => {
     return () => unsubscribe();
   }, []);
 
-  // Calculate position based on selected league
   const position = React.useMemo(() => {
     if (!user) return null;
 
@@ -45,32 +38,19 @@ export const UserMenu = ({ mobile = false }: UserMenuProps) => {
       const leagueUsers = allUsers.filter((u) =>
         leagueMemberIds.includes(u.id)
       );
-      const idx = leagueUsers.findIndex((u) => u.id === user.uid);
+      const idx = leagueUsers.findIndex((u) => u.id === user.id);
       if (idx === -1) return null;
       return idx + 1;
     }
 
-    const idx = allUsers.findIndex((u) => u.id === user.uid);
+    const idx = allUsers.findIndex((u) => u.id === user.id);
     return idx >= 0 ? idx + 1 : null;
   }, [user, allUsers, selectedLeague, leagueMemberIds]);
 
-  // Navigate to user profile after sign-in
-  React.useEffect(() => {
-    if (justSignedIn.current && userData?.userName) {
-      justSignedIn.current = false;
-      void navigate(`/${userData.userName}`);
-    }
-  }, [userData, navigate]);
-
   const handleSignOut = () => {
-    signOut(auth)
-      .then(() => {
-        void navigate('/');
-      })
-      .catch(console.error);
+    navigate('/');
   };
 
-  // Close dropdown when clicking outside
   React.useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as Node;
@@ -90,39 +70,30 @@ export const UserMenu = ({ mobile = false }: UserMenuProps) => {
 
   const closeMenu = () => setIsOpen(false);
 
-  const handleSignIn = () => {
-    justSignedIn.current = true;
-    signInWithPopup(auth, googleProvider).catch((error) => {
-      justSignedIn.current = false;
-      console.error(error);
-    });
-  };
-
-  // Show sign in button if not authenticated
   if (!user) {
     return (
-      <Button onClick={handleSignIn} className={mobile ? 'text-xs' : 'w-full'}>
-        {mobile ? 'Sign In' : 'Sign In with Google'}
+      <Button onClick={() => navigate('/login')} className={mobile ? 'text-xs' : 'w-full'}>
+        {mobile ? 'Register' : 'Register'}
       </Button>
     );
   }
-  console.log({ user });
+
   return (
     <div ref={buttonRef} className="relative">
       <Button
         onClick={() => setIsOpen(!isOpen)}
         className={`flex items-center ${mobile ? 'gap-x-2 p-0! pr-2! border border-black/10 rounded-lg bg-white/10' : `w-full gap-3 justify-start px-3! p-2! border border-white/10 bg-black/20 backdrop-blur-sm ${isOpen ? 'rounded-t-xl rounded-b-none' : 'rounded-xl'}`}`}
       >
-        {!mobile && userData && (
+        {!mobile && user && (
           <>
             <ProfilePicture
-              src={userData.photoURL}
-              name={userData.displayName}
+              src={user.photoURL}
+              name={user.display_name}
               size="md"
               className="border-0 rounded-lg"
             />
             {[
-              { label: 'Score', value: userData.score, show: true },
+              { label: 'Score', value: user.score, show: true },
               {
                 label: 'Rank',
                 value: getPositionCompact(position!),
@@ -135,14 +106,6 @@ export const UserMenu = ({ mobile = false }: UserMenuProps) => {
                   key={item.label}
                   className="relative aspect-square h-16 flex flex-col items-center justify-center rounded-lg overflow-hidden"
                 >
-                  <div
-                    className="absolute inset-0 scale-[-1] opacity-70"
-                    style={{
-                      backgroundImage: `url(${sidebarMenuBg})`,
-                      backgroundSize: 'cover',
-                      backgroundPosition: 'center',
-                    }}
-                  />
                   <span className="relative text-white/60 text-[10px] uppercase tracking-wider">
                     {item.label}
                   </span>
@@ -158,17 +121,16 @@ export const UserMenu = ({ mobile = false }: UserMenuProps) => {
             </span>
           </>
         )}
-        {mobile && userData && (
+        {mobile && user && (
           <>
             <ProfilePicture
-              src={userData.photoURL}
-              name={userData.displayName}
+              src={user.photoURL}
+              name={user.display_name}
               size="sm"
               className="border-0 rounded-lg rounded-r-none"
             />
             {position !== null && (
               <div className="relative aspect-square h-10 flex flex-col items-center justify-center overflow-hidden border-r border-white/10 pr-2">
-                <div className="absolute inset-0 scale-[-1] opacity-70" />
                 <span className="relative text-white/60 text-[8px] uppercase tracking-wider">
                   Rank
                 </span>
@@ -189,12 +151,11 @@ export const UserMenu = ({ mobile = false }: UserMenuProps) => {
         (() => {
           const menuContent = (
             <>
-              {/* Navigation Items (desktop only) */}
               {!mobile && (
                 <>
                   <li>
                     <Link
-                      to={`/${userData?.userName}`}
+                      to={`/${user?.id}`}
                       onClick={closeMenu}
                       className={menuItemClass}
                     >
@@ -222,7 +183,6 @@ export const UserMenu = ({ mobile = false }: UserMenuProps) => {
                 </Link>
               </li>
               <li className={dividerClass} />
-              {/* Info Links (mobile only) */}
               {mobile && (
                 <>
                   <li>
@@ -246,7 +206,6 @@ export const UserMenu = ({ mobile = false }: UserMenuProps) => {
                   <li className={dividerClass} />
                 </>
               )}
-              {/* Sign Out */}
               <li>
                 <button
                   onClick={() => {

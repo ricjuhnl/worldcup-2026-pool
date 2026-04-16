@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { useAuth } from '../../hooks';
+import { useUser } from '../../hooks';
 import { type UserWithId } from '../../services';
 import { ProfilePicture } from '../ui/ProfilePicture';
 
@@ -16,7 +16,7 @@ const PodiumItem = ({
   isCurrentUser: boolean;
 }) => (
   <Link
-    to={`/${user.userName}`}
+    to={`/${user.id}`}
     className="flex flex-col items-center group border-b border-b-black/20"
   >
     <div className="relative mb-2">
@@ -50,7 +50,7 @@ const PodiumItem = ({
       {/* User info */}
       <ProfilePicture
         src={user.photoURL}
-        name={user.displayName}
+        name={user.display_name}
         size={position === 1 ? 'lg' : 'md'}
         className={`ring-4 ${
           position === 1
@@ -66,10 +66,10 @@ const PodiumItem = ({
     </div>
     <div className="w-22 sm:w-32 flex flex-col items-center overflow-hidden">
       <span className="text-white font-medium text-sm truncate w-full text-center">
-        {user.displayName?.split(' ')[0]}
+        {user.display_name?.split(' ')[0]}
       </span>
       <span className="text-white/60 text-xs truncate w-full text-center">
-        @{user.userName}
+        @{user.id}
       </span>
       <span className="text-white font-bold mt-2 text-sm sm:text-lg">
         {user.score} pts
@@ -112,7 +112,7 @@ const PodiumItem = ({
 
 // Podium component for top 3
 export const Podium = ({ users }: { users: UserWithId[] }) => {
-  const { user: currentUser } = useAuth();
+  const { user: currentUser } = useUser();
 
   if (users.length < 3) return null;
 
@@ -124,30 +124,28 @@ export const Podium = ({ users }: { users: UserWithId[] }) => {
           user={second}
           position={2}
           height="h-18 sm:h-20"
-          isCurrentUser={currentUser?.uid === second.id}
+          isCurrentUser={currentUser?.id === second?.id}
         />
         <PodiumItem
           user={first}
           position={1}
           height="h-24 sm:h-28"
-          isCurrentUser={currentUser?.uid === first.id}
+          isCurrentUser={currentUser?.id === first?.id}
         />
         <PodiumItem
           user={third}
           position={3}
           height="h-12 sm:h-16"
-          isCurrentUser={currentUser?.uid === third.id}
+          isCurrentUser={currentUser?.id === third?.id}
         />
       </div>
 
-      {/* 3D floor beneath podium */}
       <div
         className="w-full mx-auto h-10 bg-white/5 backdrop-blur-sm -mt-7 z-0"
         style={{
           clipPath: 'polygon(10% 0%, 90% 0%, 100% 100%, 0% 100%)',
         }}
       />
-      {/* Shadow under podium */}
       <div className="w-70 sm:w-100 mx-auto h-4 rounded-full bg-black/20 blur-xs backdrop-blur-sm -mt-5 z-0" />
     </div>
   );
