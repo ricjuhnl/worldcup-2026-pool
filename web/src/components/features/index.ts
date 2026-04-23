@@ -1,7 +1,6 @@
 export { AppLayout } from './AppLayout';
 export { DevToolsPanel } from './DevToolsPanel';
 export { LeaderboardList } from './LeaderboardList';
-export { LeaguePicture } from './LeaguePicture';
 export { MatchCard } from './MatchCard';
 export { MatchesByDay } from './MatchesByDay';
 export { MatchesByGroup } from './MatchesByGroup';

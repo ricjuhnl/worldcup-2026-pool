@@ -17,7 +17,15 @@ export const getUserPredictions = async (
   userId: string
 ): Promise<UserPredictions> => {
   const response = await axios.get(`${API_BASE_URL}/predictions/${userId}`);
-  return response.data as UserPredictions;
+  const predictionsArray = response.data as any[];
+  
+  // Transform array to object indexed by gameId
+  const predictions: UserPredictions = {};
+  predictionsArray.forEach((pred) => {
+    predictions[pred.gameId] = pred;
+  });
+  
+  return predictions;
 };
 
 export const getPrediction = async (
@@ -33,13 +41,14 @@ export const savePrediction = async (
   gameId: number,
   homePrediction: number,
   awayPrediction: number
-): Promise<void> => {
-  await axios.post(`${API_BASE_URL}/predictions`, {
+): Promise<Prediction> => {
+  const response = await axios.post(`${API_BASE_URL}/predictions`, {
     userId,
     game: gameId,
     homePrediction,
     awayPrediction,
   });
+  return response.data as Prediction;
 };
 
 export const subscribeToPredictions = (

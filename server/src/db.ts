@@ -56,7 +56,12 @@ function createTables(database: SqlDatabase) {
       group_letter TEXT,
       date TEXT NOT NULL,
       location TEXT,
+      location_city TEXT,
+      location_country TEXT,
+      stadium TEXT,
+      home_abbreviation TEXT NOT NULL,
       home_team TEXT NOT NULL,
+      away_abbreviation TEXT NOT NULL,
       away_team TEXT NOT NULL,
       home_score INTEGER DEFAULT -1,
       away_score INTEGER DEFAULT -1
@@ -77,28 +82,7 @@ function createTables(database: SqlDatabase) {
     )
   `);
 
-  database.run(`
-    CREATE TABLE IF NOT EXISTS leagues (
-      id TEXT PRIMARY KEY,
-      name TEXT NOT NULL,
-      slug TEXT UNIQUE NOT NULL,
-      owner_id TEXT NOT NULL,
-      invite_code TEXT NOT NULL,
-      description TEXT,
-      created_at INTEGER NOT NULL,
-      FOREIGN KEY (owner_id) REFERENCES users(id)
-    )
-  `);
 
-  database.run(`
-    CREATE TABLE IF NOT EXISTS league_members (
-      league_id TEXT NOT NULL,
-      user_id TEXT NOT NULL,
-      PRIMARY KEY (league_id, user_id),
-      FOREIGN KEY (league_id) REFERENCES leagues(id),
-      FOREIGN KEY (user_id) REFERENCES users(id)
-    )
-  `);
 }
 
 export function saveDb(): void {

@@ -10,8 +10,10 @@ import {
 import { useMatches, useUser } from '../hooks';
 import {
   type UserPredictions,
+  type Prediction,
   subscribeToPredictions,
   getUserByUsername,
+  getUserPredictions,
 } from '../services';
 
 type ViewMode = 'day' | 'group';
@@ -24,6 +26,7 @@ export const UserProfile = () => {
   const [predictions, setPredictions] = React.useState<UserPredictions>({});
   const [profileUserId, setProfileUserId] = React.useState<string | null>(null);
   const [profileLoading, setProfileLoading] = React.useState(true);
+  const subscriptionRef = React.useRef<() => void | null>(null);
 
   const isOwnProfile = user?.id === userName;
 
@@ -50,9 +53,27 @@ export const UserProfile = () => {
   React.useEffect(() => {
     if (!profileUserId) return;
 
-    const unsubscribe = subscribeToPredictions(profileUserId, setPredictions);
-    return () => unsubscribe();
-  }, [profileUserId]);
+    // For own profile, fetch once and rely on immediate updates after save
+    // For other users, use polling to see their predictions
+    if (isOwnProfile) {
+      getUserPredictions(profileUserId).then(setPredictions).catch(console.error);
+    } else {
+      subscriptionRef.current = subscribeToPredictions(profileUserId, setPredictions);
+    }
+    
+    return () => {
+      if (subscriptionRef.current) {
+        subscriptionRef.current();
+      }
+    };
+  }, [profileUserId, isOwnProfile]);
+
+  const handlePredictionSaved = React.useCallback((gameId: number, prediction: Prediction) => {
+    setPredictions(prev => ({
+      ...prev,
+      [gameId]: prediction,
+    }));
+  }, []);
 
   const loading = profileLoading || matchesLoading;
 
@@ -83,6 +104,7 @@ export const UserProfile = () => {
                   isOwnProfile={isOwnProfile}
                   userId={profileUserId ?? undefined}
                   predictions={predictions}
+                  onPredictionSaved={handlePredictionSaved}
                 />
               ) : (
                 <MatchesByGroup
@@ -90,6 +112,7 @@ export const UserProfile = () => {
                   isOwnProfile={isOwnProfile}
                   userId={profileUserId ?? undefined}
                   predictions={predictions}
+                  onPredictionSaved={handlePredictionSaved}
                 />
               ))}
           </>

@@ -13,12 +13,13 @@ const transformMatch = (match: any) => {
     date: match.date,
     timestamp: new Date(match.date).getTime(),
     location: match.location || '',
-    locationCity: '',
-    locationCountry: '',
-    home: match.home_team || '',
+    locationCity: match.location_city || '',
+    locationCountry: match.location_country || '',
+    stadium: match.stadium || '',
+    home: match.home_abbreviation || match.home_team || '',
     homeName: match.home_team || '',
     homeScore: match.home_score ?? -1,
-    away: match.away_team || '',
+    away: match.away_abbreviation || match.away_team || '',
     awayName: match.away_team || '',
     awayScore: match.away_score ?? -1,
   };
@@ -98,10 +99,13 @@ router.post('/sync', async (req: Request, res: Response) => {
       const round = item.StageName?.[0]?.Description ?? '';
       const group =
         item.GroupName?.[0]?.Description?.replace('Group ', '') ?? null;
-      const home = item.Home?.Abbreviation ?? item.PlaceHolderA;
-      const homeName = item.Home?.ShortClubName ?? item.PlaceHolderA;
-      const away = item.Away?.Abbreviation ?? item.PlaceHolderB;
-      const awayName = item.Away?.ShortClubName ?? item.PlaceHolderB;
+      const homeAbbreviation = item.Home?.Abbreviation ?? item.PlaceHolderA;
+      const homeName = item.Home?.ShortClubName ?? homeAbbreviation;
+      const awayAbbreviation = item.Away?.Abbreviation ?? item.PlaceHolderB;
+      const awayName = item.Away?.ShortClubName ?? awayAbbreviation;
+      const stadium = item.Stadium?.Name?.[0]?.Description ?? '';
+      const city = item.Stadium?.CityName?.[0]?.Description ?? '';
+      const country = item.Stadium?.IdCountry ?? '';
 
       matches.push({
         game,
@@ -109,9 +113,14 @@ router.post('/sync', async (req: Request, res: Response) => {
         round,
         group_letter: group,
         date: item.Date,
-        location: item.Stadium?.Name?.[0]?.Description ?? '',
-        home_team: homeName || home,
-        away_team: awayName || away,
+        location: stadium || city,
+        location_city: city,
+        location_country: country,
+        stadium: stadium,
+        home_abbreviation: homeAbbreviation,
+        home_team: homeName,
+        away_abbreviation: awayAbbreviation,
+        away_team: awayName,
         home_score: item.Home?.Score ?? -1,
         away_score: item.Away?.Score ?? -1,
       });
@@ -121,8 +130,8 @@ router.post('/sync', async (req: Request, res: Response) => {
     db.run('DELETE FROM matches');
 
     const insertStmt = db.prepare(`
-      INSERT INTO matches (game, fifa_id, round, group_letter, date, location, home_team, away_team, home_score, away_score)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO matches (game, fifa_id, round, group_letter, date, location, location_city, location_country, stadium, home_abbreviation, home_team, away_abbreviation, away_team, home_score, away_score)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
 
     for (const match of matches) {
@@ -133,7 +142,12 @@ router.post('/sync', async (req: Request, res: Response) => {
         match.group_letter,
         match.date,
         match.location,
+        match.location_city,
+        match.location_country,
+        match.stadium,
+        match.home_abbreviation,
         match.home_team,
+        match.away_abbreviation,
         match.away_team,
         match.home_score,
         match.away_score,

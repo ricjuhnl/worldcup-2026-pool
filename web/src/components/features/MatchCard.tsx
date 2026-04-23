@@ -4,15 +4,17 @@ import { Card } from '../ui/Card';
 
 // Import all flags dynamically
 const flagModules: Record<string, string> = import.meta.glob(
-  '../../assets/flags/*.png',
+  '/src/assets/flags/*.png',
   { eager: true, import: 'default' }
 );
 
+console.log('Flag modules keys:', Object.keys(flagModules));
+
 const getFlag = (code: string): string => {
-  return (
-    flagModules[`../../assets/flags/${code}.png`] ??
-    flagModules['../../assets/flags/UNKNOWN.png']
-  );
+  const upperCode = code ? code.toUpperCase() : 'UNKNOWN';
+  const key = `/src/assets/flags/${upperCode}.png`;
+  console.log('Flag code received:', code, 'Looking for:', key, 'Found:', !!flagModules[key], 'Available keys:', Object.keys(flagModules).slice(0, 5));
+  return flagModules[key] ?? flagModules['/src/assets/flags/UNKNOWN.png'];
 };
 
 type MatchCardProps = {
@@ -20,6 +22,7 @@ type MatchCardProps = {
   isOwnProfile?: boolean;
   userId?: string;
   prediction?: Prediction;
+  onPredictionSaved?: (gameId: number, prediction: Prediction) => void;
 };
 
 export const MatchCard = ({
@@ -27,6 +30,7 @@ export const MatchCard = ({
   isOwnProfile = false,
   userId,
   prediction,
+  onPredictionSaved,
 }: MatchCardProps) => {
   const matchDate = new Date(match.date);
   const timeString = matchDate.toLocaleTimeString([], {
@@ -71,7 +75,10 @@ export const MatchCard = ({
 
     setSaving(true);
     try {
-      await savePrediction(userId, match.game, home, away);
+      const savedPrediction = await savePrediction(userId, match.game, home, away);
+      if (onPredictionSaved) {
+        onPredictionSaved(match.game, savedPrediction);
+      }
     } catch (error) {
       console.error('Error saving prediction:', error);
     } finally {
@@ -80,7 +87,9 @@ export const MatchCard = ({
   };
 
   const handleBlur = () => {
-    if (homePrediction !== '' && awayPrediction !== '') {
+    const home = parseInt(homePrediction, 10);
+    const away = parseInt(awayPrediction, 10);
+    if (!isNaN(home) && !isNaN(away) && home >= 0 && away >= 0) {
       void handleSavePrediction();
     }
   };

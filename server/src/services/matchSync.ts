@@ -11,6 +11,8 @@ interface FifaMatch {
   Date: string;
   Stadium: {
     Name: Array<{ Description: string }>;
+    CityName: Array<{ Description: string }>;
+    IdCountry: string;
   };
   Home: {
     Abbreviation: string | null;
@@ -55,7 +57,12 @@ export const syncMatchesFromApi = async (): Promise<number> => {
       group_letter: string | null;
       date: string;
       location: string;
+      location_city: string;
+      location_country: string;
+      stadium: string;
+      home_abbreviation: string;
       home_team: string;
+      away_abbreviation: string;
       away_team: string;
       home_score: number;
       away_score: number;
@@ -65,10 +72,13 @@ export const syncMatchesFromApi = async (): Promise<number> => {
       const game = index + 1;
       const round = item.StageName?.[0]?.Description ?? '';
       const group = item.GroupName?.[0]?.Description?.replace('Group ', '') ?? null;
-      const home = item.Home?.Abbreviation ?? item.PlaceHolderA;
-      const homeName = item.Home?.ShortClubName ?? item.PlaceHolderA;
-      const away = item.Away?.Abbreviation ?? item.PlaceHolderB;
-      const awayName = item.Away?.ShortClubName ?? item.PlaceHolderB;
+      const homeAbbreviation = item.Home?.Abbreviation ?? item.PlaceHolderA;
+      const homeName = item.Home?.ShortClubName ?? homeAbbreviation;
+      const awayAbbreviation = item.Away?.Abbreviation ?? item.PlaceHolderB;
+      const awayName = item.Away?.ShortClubName ?? awayAbbreviation;
+      const stadium = item.Stadium?.Name?.[0]?.Description ?? '';
+      const city = item.Stadium?.CityName?.[0]?.Description ?? '';
+      const country = item.Stadium?.IdCountry ?? '';
 
       matches.push({
         game,
@@ -76,9 +86,14 @@ export const syncMatchesFromApi = async (): Promise<number> => {
         round,
         group_letter: group,
         date: item.Date,
-        location: item.Stadium?.Name?.[0]?.Description ?? '',
-        home_team: homeName || home,
-        away_team: awayName || away,
+        location: stadium || city,
+        location_city: city,
+        location_country: country,
+        stadium: stadium,
+        home_abbreviation: homeAbbreviation,
+        home_team: homeName,
+        away_abbreviation: awayAbbreviation,
+        away_team: awayName,
         home_score: item.Home?.Score ?? -1,
         away_score: item.Away?.Score ?? -1,
       });
@@ -88,8 +103,8 @@ export const syncMatchesFromApi = async (): Promise<number> => {
     db.run('DELETE FROM matches');
 
     const insertStmt = db.prepare(`
-      INSERT INTO matches (game, fifa_id, round, group_letter, date, location, home_team, away_team, home_score, away_score)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO matches (game, fifa_id, round, group_letter, date, location, location_city, location_country, stadium, home_abbreviation, home_team, away_abbreviation, away_team, home_score, away_score)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
 
     for (const match of matches) {
@@ -100,7 +115,12 @@ export const syncMatchesFromApi = async (): Promise<number> => {
         match.group_letter,
         match.date,
         match.location,
+        match.location_city,
+        match.location_country,
+        match.stadium,
+        match.home_abbreviation,
         match.home_team,
+        match.away_abbreviation,
         match.away_team,
         match.home_score,
         match.away_score,

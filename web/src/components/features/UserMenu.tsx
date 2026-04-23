@@ -1,7 +1,7 @@
 import React from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate, Link } from 'react-router-dom';
-import { useUser, useLeague } from '../../hooks';
+import { useUser } from '../../hooks';
 import { subscribeToLeaderboard, type UserWithId } from '../../services';
 import { getPositionCompact } from '../../utils';
 import { Button, ProfilePicture } from '../ui';
@@ -18,7 +18,6 @@ type UserMenuProps = {
 export const UserMenu = ({ mobile = false }: UserMenuProps) => {
   const navigate = useNavigate();
   const { user } = useUser();
-  const { selectedLeague, leagueMemberIds } = useLeague();
   const [isOpen, setIsOpen] = React.useState(false);
   const [allUsers, setAllUsers] = React.useState<UserWithId[]>([]);
   const buttonRef = React.useRef<HTMLDivElement>(null);
@@ -34,18 +33,9 @@ export const UserMenu = ({ mobile = false }: UserMenuProps) => {
   const position = React.useMemo(() => {
     if (!user) return null;
 
-    if (selectedLeague && leagueMemberIds.length > 0) {
-      const leagueUsers = allUsers.filter((u) =>
-        leagueMemberIds.includes(u.id)
-      );
-      const idx = leagueUsers.findIndex((u) => u.id === user.id);
-      if (idx === -1) return null;
-      return idx + 1;
-    }
-
     const idx = allUsers.findIndex((u) => u.id === user.id);
     return idx >= 0 ? idx + 1 : null;
-  }, [user, allUsers, selectedLeague, leagueMemberIds]);
+  }, [user, allUsers]);
 
   const handleSignOut = () => {
     navigate('/');
@@ -152,26 +142,15 @@ export const UserMenu = ({ mobile = false }: UserMenuProps) => {
           const menuContent = (
             <>
               {!mobile && (
-                <>
-                  <li>
-                    <Link
-                      to={`/${user?.id}`}
-                      onClick={closeMenu}
-                      className={menuItemClass}
-                    >
-                      <span>⚽</span> My Predictions
-                    </Link>
-                  </li>
-                  <li>
-                    <Link
-                      to="/leagues"
-                      onClick={closeMenu}
-                      className={menuItemClass}
-                    >
-                      <span>🏆</span> My Leagues
-                    </Link>
-                  </li>
-                </>
+                <li>
+                  <Link
+                    to={`/${user?.id}`}
+                    onClick={closeMenu}
+                    className={menuItemClass}
+                  >
+                    <span>⚽</span> My Predictions
+                  </Link>
+                </li>
               )}
               <li>
                 <Link

@@ -1,12 +1,10 @@
 import React from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { useUser, useLeague } from '../../hooks';
+import { Link } from 'react-router-dom';
+import { useUser } from '../../hooks';
 import { subscribeToLeaderboard, type UserWithId } from '../../services';
 import { getPositionCompact } from '../../utils';
 import { Card, ProfilePicture } from '../ui';
-import { LeaguePicture } from './LeaguePicture';
 import { Podium } from './Podium';
-import appIcon from '/app-icon.png';
 
 type LeaderboardProps = {
   variant?: 'compact' | 'full';
@@ -83,31 +81,10 @@ export const LeaderboardList = ({
   onRemoveMember,
 }: LeaderboardProps) => {
   const { user: currentUser } = useUser();
-  const { leagues, selectedLeague, setSelectedLeague, leagueMemberIds } =
-    useLeague();
-  const location = useLocation();
-  const navigate = useNavigate();
-  const isOnLeaguePage = location.pathname.startsWith('/league/');
   const [allUsers, setAllUsers] = React.useState<UserWithId[]>([]);
   const [loading, setLoading] = React.useState(!externalUsers);
   const [showTopFade, setShowTopFade] = React.useState(false);
-  const [dropdownOpen, setDropdownOpen] = React.useState(false);
   const scrollRef = React.useRef<HTMLDivElement>(null);
-  const dropdownRef = React.useRef<HTMLDivElement>(null);
-
-  // Close dropdown when clicking outside
-  React.useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (
-        dropdownRef.current &&
-        !dropdownRef.current.contains(event.target as Node)
-      ) {
-        setDropdownOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
 
   // Subscribe to global leaderboard
   React.useEffect(() => {
@@ -120,12 +97,7 @@ export const LeaderboardList = ({
     return () => unsubscribe();
   }, [externalUsers]);
 
-  // Filter users by league if selected
-  const users = React.useMemo(() => {
-    if (externalUsers) return externalUsers;
-    if (!selectedLeague || leagueMemberIds.length === 0) return allUsers;
-    return allUsers.filter((user) => leagueMemberIds.includes(user.id));
-  }, [externalUsers, selectedLeague, leagueMemberIds, allUsers]);
+  const users = externalUsers ?? allUsers;
 
   const handleScroll = () => {
     if (scrollRef.current) {
@@ -155,75 +127,9 @@ export const LeaderboardList = ({
 
   return (
     <div className="flex flex-col flex-1 min-h-0">
-      {isCompact &&
-        (leagues.length > 0 ? (
-          <div ref={dropdownRef} className="relative px-4 mb-2">
-            <button
-              onClick={() => setDropdownOpen(!dropdownOpen)}
-              className="w-full flex items-center justify-between text-white/70 text-xs font-medium uppercase tracking-wider hover:text-white transition-colors"
-            >
-              {selectedLeague ? selectedLeague.name : 'Leaderboard'}
-              <span
-                className={`transition-transform ${dropdownOpen ? 'rotate-180' : ''}`}
-              >
-                ▼
-              </span>
-            </button>
-            {dropdownOpen && (
-              <ul className="absolute top-full left-2 right-2 mt-1 bg-black/80 backdrop-blur-lg border border-white/10 rounded-lg overflow-hidden z-20">
-                <li>
-                  <button
-                    onClick={() => {
-                      setSelectedLeague(null);
-                      setDropdownOpen(false);
-                      if (isOnLeaguePage) {
-                        void navigate('/leagues');
-                      }
-                    }}
-                    className={`w-full px-3 py-2 text-left text-sm hover:bg-white/10 transition-colors flex items-center gap-2 ${!selectedLeague ? 'text-white bg-white/5' : 'text-white/70'}`}
-                  >
-                    <img
-                      src={appIcon}
-                      alt="Global"
-                      className="w-10 h-10 rounded-xl object-cover"
-                    />
-                    <span className="flex-1 truncate">FIFA WC 2026 POOL</span>
-                    {!selectedLeague && <span className="ml-auto">✓</span>}
-                  </button>
-                </li>
-                {leagues.map((league) => (
-                  <li key={league.id}>
-                    <button
-                      onClick={() => {
-                        setSelectedLeague(league);
-                        setDropdownOpen(false);
-                        if (isOnLeaguePage) {
-                          void navigate(`/league/${league.slug}`);
-                        }
-                      }}
-                      className={`w-full px-3 py-2 text-left text-sm hover:bg-white/10 transition-colors flex items-center gap-2 ${selectedLeague?.id === league.id ? 'text-white bg-white/5' : 'text-white/70'}`}
-                    >
-                      <LeaguePicture
-                        src={league.imageURL}
-                        name={league.name}
-                        size="sm"
-                        className="w-6 h-6"
-                      />
-                      <span className="flex-1 truncate">{league.name}</span>
-                      {selectedLeague?.id === league.id && (
-                        <span className="ml-auto">✓</span>
-                      )}
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-        ) : (
-          <h3 className="text-white/70 text-xs font-medium uppercase tracking-wider mb-2 px-4">
-            Leaderboard
-          </h3>
-        ))}
+      <h3 className="text-white/70 text-xs font-medium uppercase tracking-wider mb-2 px-4">
+        Leaderboard
+      </h3>
       {/* Podium for full variant */}
       {!isCompact && <Podium users={podiumUsers} />}
 

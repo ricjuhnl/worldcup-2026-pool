@@ -14,7 +14,6 @@ export {
   AppLayout,
   DevToolsPanel,
   LeaderboardList,
-  LeaguePicture,
   MatchCard,
   MatchesByDay,
   MatchesByGroup,

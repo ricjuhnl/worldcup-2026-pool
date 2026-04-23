@@ -13,7 +13,15 @@ router.get('/:userId', async (req: Request, res: Response) => {
     
     const predictions: any[] = [];
     while (stmt.step()) {
-      predictions.push(stmt.getAsObject());
+      const pred = stmt.getAsObject() as any;
+      // Transform to camelCase for client compatibility
+      predictions.push({
+        gameId: pred.game,
+        homePrediction: pred.home_prediction,
+        awayPrediction: pred.away_prediction,
+        points: pred.points,
+        updatedAt: pred.updated_at,
+      });
     }
     stmt.free();
     
@@ -40,7 +48,16 @@ router.get('/:userId/:game', async (req: Request, res: Response) => {
     const prediction = stmt.getAsObject() as any;
     stmt.free();
     
-    res.json(prediction);
+    // Transform to camelCase for client compatibility
+    const responsePrediction = {
+      gameId: prediction.game,
+      homePrediction: prediction.home_prediction,
+      awayPrediction: prediction.away_prediction,
+      points: prediction.points,
+      updatedAt: prediction.updated_at,
+    };
+    
+    res.json(responsePrediction);
   } catch (error) {
     console.error('Error getting prediction:', error);
     res.status(500).json({ error: 'Internal server error' });
@@ -103,7 +120,16 @@ router.post('/', async (req: Request, res: Response) => {
     const prediction = predictionStmt.step() ? predictionStmt.getAsObject() as any : null;
     predictionStmt.free();
     
-    res.json(prediction);
+    // Transform to camelCase for client compatibility
+    const responsePrediction = prediction ? {
+      gameId: prediction.game,
+      homePrediction: prediction.home_prediction,
+      awayPrediction: prediction.away_prediction,
+      points: prediction.points,
+      updatedAt: prediction.updated_at,
+    } : null;
+    
+    res.json(responsePrediction);
   } catch (error) {
     console.error('Error saving prediction:', error);
     res.status(500).json({ error: 'Internal server error' });

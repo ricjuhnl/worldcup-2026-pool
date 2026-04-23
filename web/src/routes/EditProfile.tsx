@@ -13,7 +13,6 @@ import { useToast } from '../hooks/useToast';
 import {
   checkUsernameAvailable,
   deleteUserAccount,
-  getLeaguesOwnedByUser,
   isReservedUsername,
   sanitizeUsername,
 } from '../services';
@@ -97,16 +96,6 @@ export const EditProfile = () => {
 
   const handleDeleteAccount = async () => {
     if (!user) return;
-
-    const ownedLeagues = await getLeaguesOwnedByUser(user.id);
-    if (ownedLeagues.length > 0) {
-      const leagueNames = ownedLeagues.map((l) => l.name).join(', ');
-      showToast(
-        `You must delete or transfer ownership of your leagues first: ${leagueNames}`,
-        'error'
-      );
-      return;
-    }
 
     const confirmed = await showConfirm({
       title: 'Delete Account',

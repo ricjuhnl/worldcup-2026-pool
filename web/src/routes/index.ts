@@ -1,12 +1,7 @@
 export { About } from './About';
-export { EditLeague } from './EditLeague';
 export { EditProfile } from './EditProfile';
 export { Home } from './Home';
-export { JoinLeague } from './JoinLeague';
 export { Leaderboard } from './Leaderboard';
-export { LeagueDetail } from './LeagueDetail';
-export { Leagues } from './Leagues';
 export { Login } from './Login';
-export { NewLeague } from './NewLeague';
 export { Rules } from './Rules';
 export { UserProfile } from './UserProfile';

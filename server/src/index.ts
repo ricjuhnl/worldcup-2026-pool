@@ -4,7 +4,6 @@ import { initDb, getDb } from './db.js';
 import userRoutes from './routes/users.js';
 import matchRoutes from './routes/matches.js';
 import predictionRoutes from './routes/predictions.js';
-import leagueRoutes from './routes/leagues.js';
 import * as cron from './cron.js';
 import { syncMatchesFromApi } from './services/matchSync.js';
 
@@ -17,7 +16,6 @@ app.use(express.json());
 app.use('/api/users', userRoutes);
 app.use('/api/matches', matchRoutes);
 app.use('/api/predictions', predictionRoutes);
-app.use('/api/leagues', leagueRoutes);
 
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });

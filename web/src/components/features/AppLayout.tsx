@@ -1,9 +1,8 @@
 import React from 'react';
 import { Link, NavLink } from 'react-router-dom';
 import { bgImage, worldcupLogo } from '../../assets';
-import { useUser, useLeague } from '../../hooks';
+import { useUser } from '../../hooks';
 import { DevToolsPanel } from './DevToolsPanel';
-import { LeaguePicture } from './LeaguePicture';
 import { Sidebar } from './Sidebar';
 import { UserMenu } from './UserMenu';
 
@@ -14,7 +13,6 @@ type AppLayoutProps = {
 
 export const AppLayout = ({ children, className = '' }: AppLayoutProps) => {
   const { user } = useUser();
-  const { selectedLeague } = useLeague();
 
   const mobileNavItems = [
     {
@@ -23,7 +21,6 @@ export const AppLayout = ({ children, className = '' }: AppLayoutProps) => {
       label: user ? 'My Predictions' : 'All Matches',
     },
     { to: '/leaderboard', icon: '🥇', label: 'Leaderboard' },
-    { to: '/leagues', icon: '🏆', label: 'Leagues' },
   ];
 
   React.useEffect(() => {
@@ -52,33 +49,15 @@ export const AppLayout = ({ children, className = '' }: AppLayoutProps) => {
             style={{ paddingTop: 'calc(env(safe-area-inset-top) + 0.75rem)' }}
           >
             <div className="flex items-center justify-between pb-3">
-              <Link
-                to={selectedLeague ? `/league/${selectedLeague.slug}` : '/'}
-                className="flex items-center gap-2"
-              >
-                {selectedLeague ? (
-                  <>
-                    <LeaguePicture
-                      src={selectedLeague.imageURL}
-                      name={selectedLeague.name}
-                      size="sm"
-                    />
-                    <span className="text-white font-medium text-sm truncate max-w-48">
-                      {selectedLeague.name}
-                    </span>
-                  </>
-                ) : (
-                  <>
-                    <img
-                      src={worldcupLogo}
-                      alt="World Cup 2026"
-                      className="h-8"
-                    />
-                    <span className="text-white font-light text-xs">
-                      FIFA WC 2026 POOL
-                    </span>
-                  </>
-                )}
+              <Link to="/" className="flex items-center gap-2">
+                <img
+                  src={worldcupLogo}
+                  alt="World Cup 2026"
+                  className="h-8"
+                />
+                <span className="text-white font-light text-xs">
+                  FIFA WC 2026 POOL
+                </span>
               </Link>
               <UserMenu mobile />
             </div>

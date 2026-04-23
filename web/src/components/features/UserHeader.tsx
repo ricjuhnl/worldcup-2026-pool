@@ -1,7 +1,6 @@
 import React from 'react';
 import { ProfilePicture } from '../ui/ProfilePicture';
 import { getMedalOrPosition, getPositionColor } from '../../utils';
-import { useLeague } from '../../hooks';
 import {
   subscribeToLeaderboard,
   type UserData,
@@ -14,7 +13,6 @@ type UserHeaderProps = {
 };
 
 export const UserHeader = ({ userId, className = '' }: UserHeaderProps) => {
-  const { selectedLeague, leagueMemberIds } = useLeague();
   const [user, setUser] = React.useState<UserData | null>(null);
   const [allUsers, setAllUsers] = React.useState<UserWithId[]>([]);
 
@@ -30,31 +28,18 @@ export const UserHeader = ({ userId, className = '' }: UserHeaderProps) => {
     return () => unsubscribe();
   }, [userId]);
 
-  // Calculate position based on selected league
+  // Calculate position
   const position = React.useMemo(() => {
     if (!user) return null;
 
-    if (selectedLeague && leagueMemberIds.length > 0) {
-      // Filter to league members and find position
-      const leagueUsers = allUsers.filter((u) =>
-        leagueMemberIds.includes(u.id)
-      );
-      const idx = leagueUsers.findIndex((u) => u.id === userId);
-      if (idx === -1) return null; // User not in this league
-      return idx + 1;
-    }
-
-    // Global position
     const idx = allUsers.findIndex((u) => u.id === userId);
     return idx >= 0 ? idx + 1 : null;
-  }, [user, userId, allUsers, selectedLeague, leagueMemberIds]);
+  }, [user, userId, allUsers]);
 
   const positionColor = getPositionColor(position ?? 0);
   const positionText = getMedalOrPosition(position ?? 0);
 
   if (!user) return null;
-
-  const isInLeague = !selectedLeague || leagueMemberIds.includes(userId);
 
   return (
     <div className={`flex items-center gap-4 ${className}`}>
@@ -71,20 +56,7 @@ export const UserHeader = ({ userId, className = '' }: UserHeaderProps) => {
           <span>·</span>
           <span>{user.score} pts</span>
           {position !== null && (
-            <>
-              <span>·</span>
-              <span className={positionColor}>{positionText}</span>
-              {selectedLeague && (
-                <span className="text-white/40 text-xs">
-                  in {selectedLeague.name}
-                </span>
-              )}
-            </>
-          )}
-          {selectedLeague && !isInLeague && (
-            <span className="text-white/40 text-xs italic">
-              (not in {selectedLeague.name})
-            </span>
+            <span className={positionColor}>{positionText}</span>
           )}
         </div>
       </div>

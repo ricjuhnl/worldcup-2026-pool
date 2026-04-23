@@ -32,8 +32,6 @@ export const RESERVED_USERNAMES = [
   'users',
   'club',
   'clubs',
-  'league',
-  'leagues',
 ];
 
 export const normalizeUsername = (userName: string): string => {
