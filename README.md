@@ -2,9 +2,7 @@
 
 A betting pool web application for the FIFA World Cup 2026. Built with React, TypeScript, and a lightweight SQLite backend.
 
-### 🚀 **Play Now**
-
-Join the action live at **[worldcup-2026.web.app](https://worldcup-2026.web.app/)**!
+> ℹ️ **This is a fork** of the original project [ionmx/worldcup-2026-pool](https://github.com/ionmx/worldcup-2026-pool), modified to remove Firebase dependencies and use a simple SQLite backend instead.
 
 > [!NOTE]
 > 🚧 **Status:** Currently in public beta testing.
@@ -28,7 +26,7 @@ Join the action live at **[worldcup-2026.web.app](https://worldcup-2026.web.app/
 
 ## Project Structure
 
-```
+```tree
 worldcup-2026-pool/
 ├── web/                    # React frontend application
 │   ├── src/
@@ -56,8 +54,7 @@ worldcup-2026-pool/
 
 ### Prerequisites
 
-- Node.js (v18+)
-- npm or yarn
+- Docker
 
 ### Environment Setup
 
@@ -68,85 +65,33 @@ git clone <repository-url>
 cd worldcup-2026-pool
 ```
 
-2. Install dependencies:
+## Deploying with Docker
+
+The easiest way to run both the frontend and backend together is with Docker Compose:
 
 ```bash
-# Install root dependencies
-npm install
+# Build and start all services
+docker compose up -d --build
 
-# Install web dependencies
-cd web && npm install
+# View logs
+docker compose logs -f
 
-# Install server dependencies
-cd ../server && npm install
+# Stop services
+docker compose down
 ```
 
-3. Set up environment variables for the web app:
+This will start:
 
-```bash
-cd web
-cp .env.example .env
-```
+- **Backend**: http://localhost:3000
+- **Frontend**: http://localhost:5173
 
-4. Configure the API URL in `web/.env`:
-
-```env
-VITE_API_URL=http://localhost:3000/api
-```
-
-For production, update this to your backend URL.
-
-## Development
-
-### Web Application
-
-```bash
-cd web
-
-# Start development server
-npm run dev
-
-# Run linting
-npm run lint
-
-# Build for production
-npm run build
-
-# Preview production build
-npm run preview
-```
-
-### Server
-
-```bash
-cd server
-
-# Start development server with hot reload
-npm run dev
-
-# Build for production
-npm run build
-
-# Start production server
-npm run start
-```
+The database is persisted in `./server/data` directory.
 
 The server will:
+
 - Create the SQLite database automatically on first run
 - Sync match data from FIFA API
 - Run a cron job every 10 minutes to update scores
-
-### Deploying to Firebase Hosting
-
-The web app can be deployed to Firebase Hosting, but note that you'll need to host the backend separately (e.g., Railway, Render, Heroku) since Firebase Hosting is static-only.
-
-```bash
-# Build the web app
-cd web && npm run build
-
-# Deploy to Firebase Hosting
-firebase deploy --only hosting
-```
 
 ## Code Conventions
 
