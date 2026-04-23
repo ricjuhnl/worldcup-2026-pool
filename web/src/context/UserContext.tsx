@@ -29,17 +29,28 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const storedUser = localStorage.getItem('currentUser');
-    if (storedUser) {
-      try {
-        const userData = JSON.parse(storedUser) as UserData;
-        setUser(userData);
-      } catch (error) {
-        console.error('Error parsing stored user:', error);
-        localStorage.removeItem('currentUser');
+    const validateStoredUser = async () => {
+      const storedUser = localStorage.getItem('currentUser');
+      if (storedUser) {
+        try {
+          const userData = JSON.parse(storedUser) as UserData;
+          
+          try {
+            await axios.get(`${API_BASE_URL}/users/${userData.id}`);
+            setUser(userData);
+          } catch {
+            console.log('Stored user no longer exists on server, clearing');
+            localStorage.removeItem('currentUser');
+          }
+        } catch (error) {
+          console.error('Error parsing stored user:', error);
+          localStorage.removeItem('currentUser');
+        }
       }
-    }
-    setLoading(false);
+      setLoading(false);
+    };
+
+    validateStoredUser();
   }, []);
 
   const login = async (username: string) => {
