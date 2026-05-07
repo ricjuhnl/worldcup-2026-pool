@@ -12,9 +12,13 @@ console.log('Flag modules keys:', Object.keys(flagModules));
 
 const getFlag = (code: string): string => {
   const upperCode = code ? code.toUpperCase() : 'UNKNOWN';
+  
+  if (!/^[A-Z]{2,3}$/.test(upperCode)) {
+    return flagModules['/src/assets/flags/UNKNOWN.png'] ?? '';
+  }
+  
   const key = `/src/assets/flags/${upperCode}.png`;
-  console.log('Flag code received:', code, 'Looking for:', key, 'Found:', !!flagModules[key], 'Available keys:', Object.keys(flagModules).slice(0, 5));
-  return flagModules[key] ?? flagModules['/src/assets/flags/UNKNOWN.png'];
+  return flagModules[key] ?? flagModules['/src/assets/flags/UNKNOWN.png'] ?? '';
 };
 
 type MatchCardProps = {
@@ -36,6 +40,7 @@ export const MatchCard = ({
   const timeString = matchDate.toLocaleTimeString([], {
     hour: '2-digit',
     minute: '2-digit',
+    hour12: false,
   });
   const isPlayed = match.homeScore >= 0 && match.awayScore >= 0;
   const cutoffTime = match.timestamp * 1000 - 10 * 60 * 1000; // 10 mins before kickoff

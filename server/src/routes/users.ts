@@ -205,23 +205,24 @@ router.delete('/:username', async (req: Request, res: Response) => {
       return res.status(404).json({ error: 'User not found' });
     }
     
-    // Delete league memberships
-    db.run('DELETE FROM league_members WHERE user_id = ?', [normalizedUsername]);
-    
-    // Delete leagues owned by user
-    const ownedStmt = db.prepare('SELECT id FROM leagues WHERE owner_id = ?');
-    ownedStmt.bind([normalizedUsername]);
-    const ownedLeagues: string[] = [];
-    while (ownedStmt.step()) {
-      const row = ownedStmt.getAsObject() as any;
-      ownedLeagues.push(row.id);
-    }
-    ownedStmt.free();
-    
-    for (const leagueId of ownedLeagues) {
-      db.run('DELETE FROM league_members WHERE league_id = ?', [leagueId]);
-      db.run('DELETE FROM leagues WHERE id = ?', [leagueId]);
-    }
+    // Delete league memberships (if table exists)
+    try {
+      db.run('DELETE FROM league_members WHERE user_id = ?', [normalizedUsername]);
+      
+      const ownedStmt = db.prepare('SELECT id FROM leagues WHERE owner_id = ?');
+      ownedStmt.bind([normalizedUsername]);
+      const ownedLeagues: string[] = [];
+      while (ownedStmt.step()) {
+        const row = ownedStmt.getAsObject() as any;
+        ownedLeagues.push(row.id);
+      }
+      ownedStmt.free();
+      
+      for (const leagueId of ownedLeagues) {
+        db.run('DELETE FROM league_members WHERE league_id = ?', [leagueId]);
+        db.run('DELETE FROM leagues WHERE id = ?', [leagueId]);
+      }
+    } catch {}
     
     // Delete predictions
     db.run('DELETE FROM predictions WHERE user_id = ?', [normalizedUsername]);

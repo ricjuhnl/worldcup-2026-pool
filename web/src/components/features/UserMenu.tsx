@@ -2,6 +2,7 @@ import React from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate, Link } from 'react-router-dom';
 import { useUser } from '../../hooks';
+import { useToast } from '../../hooks/useToast';
 import { subscribeToLeaderboard, type UserWithId } from '../../services';
 import { getPositionCompact } from '../../utils';
 import { Button, ProfilePicture } from '../ui';
@@ -17,7 +18,8 @@ type UserMenuProps = {
 
 export const UserMenu = ({ mobile = false }: UserMenuProps) => {
   const navigate = useNavigate();
-  const { user } = useUser();
+  const { user, logout } = useUser();
+  const { showToast } = useToast();
   const [isOpen, setIsOpen] = React.useState(false);
   const [allUsers, setAllUsers] = React.useState<UserWithId[]>([]);
   const buttonRef = React.useRef<HTMLDivElement>(null);
@@ -38,6 +40,8 @@ export const UserMenu = ({ mobile = false }: UserMenuProps) => {
   }, [user, allUsers]);
 
   const handleSignOut = () => {
+    logout();
+    showToast('Signed out successfully', 'success');
     navigate('/');
   };
 
@@ -152,16 +156,6 @@ export const UserMenu = ({ mobile = false }: UserMenuProps) => {
                   </Link>
                 </li>
               )}
-              <li>
-                <Link
-                  to="/edit-profile"
-                  onClick={closeMenu}
-                  className={menuItemClass}
-                >
-                  <span>✏️</span> Edit Profile
-                </Link>
-              </li>
-              <li className={dividerClass} />
               {mobile && (
                 <>
                   <li>
@@ -185,6 +179,15 @@ export const UserMenu = ({ mobile = false }: UserMenuProps) => {
                   <li className={dividerClass} />
                 </>
               )}
+              <li>
+                <Link
+                  to="/edit-profile"
+                  onClick={closeMenu}
+                  className={menuItemClass}
+                >
+                  <span>⚙️</span> Account Settings
+                </Link>
+              </li>
               <li>
                 <button
                   onClick={() => {
