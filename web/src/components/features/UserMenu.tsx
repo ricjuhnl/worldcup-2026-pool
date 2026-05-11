@@ -67,7 +67,7 @@ export const UserMenu = ({ mobile = false }: UserMenuProps) => {
   if (!user) {
     return (
       <Button onClick={() => navigate('/login')} className={mobile ? 'text-xs' : 'w-full'}>
-        {mobile ? 'Register' : 'Register'}
+        {mobile ? 'Login' : 'Login'}
       </Button>
     );
   }
