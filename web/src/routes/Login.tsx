@@ -6,6 +6,7 @@ export const Login = () => {
   const navigate = useNavigate();
   const { login } = useUser();
   const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
 
   const handleSubmit = async (e: FormEvent) => {
@@ -17,8 +18,13 @@ export const Login = () => {
       return;
     }
 
+    if (!password.trim()) {
+      setError('Please enter a password');
+      return;
+    }
+
     try {
-      await login(username.trim());
+      await login(username.trim(), password);
       navigate('/');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to login');
@@ -58,6 +64,27 @@ export const Login = () => {
             value={username}
             onChange={(e) => setUsername(e.target.value)}
             placeholder="Enter username"
+            style={{
+              padding: '12px',
+              border: '1px solid #ddd',
+              borderRadius: '4px',
+              fontSize: '16px',
+              backgroundColor: '#fff',
+              color: '#333',
+            }}
+          />
+        </div>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          <label htmlFor="password" style={{ fontWeight: '500', color: '#333' }}>
+            Enter password
+          </label>
+          <input
+            id="password"
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="Enter password"
             style={{
               padding: '12px',
               border: '1px solid #ddd',

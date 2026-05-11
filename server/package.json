@@ -8,15 +8,18 @@
     "dev": "tsx watch src/index.ts",
     "build": "tsc",
     "start": "node dist/index.js",
-    "dev:sync": "tsx src/services/fifaApi.ts"
+    "dev:sync": "tsx src/services/fifaApi.ts",
+    "migrate": "tsx src/scripts/migrate-password.ts"
   },
   "dependencies": {
+    "bcryptjs": "^3.0.3",
     "cors": "^2.8.5",
     "express": "^4.21.2",
     "node-cron": "^3.0.3",
     "sql.js": "^1.10.3"
   },
   "devDependencies": {
+    "@types/bcryptjs": "^2.4.6",
     "@types/cors": "^2.8.17",
     "@types/express": "^5.0.0",
     "@types/node": "^22.13.10",

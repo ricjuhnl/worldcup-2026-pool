@@ -7,7 +7,7 @@ const API_BASE_URL = '/api'; // Proxy path through Nginx
 export interface UserContextType {
   user: UserData | null;
   loading: boolean;
-  login: (username: string) => Promise<void>;
+  login: (username: string, password: string) => Promise<void>;
   updateUser: (data: Partial<UserData>) => Promise<void>;
   logout: () => void;
 }
@@ -53,18 +53,19 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     validateStoredUser();
   }, []);
 
-  const login = async (username: string) => {
+  const login = async (username: string, password: string) => {
     try {
       const response = await axios.post(`${API_BASE_URL}/users`, {
         username,
         displayName: username,
+        password,
       });
       const userData = response.data as UserData;
       setUser(userData);
       localStorage.setItem('currentUser', JSON.stringify(userData));
     } catch (error) {
       console.error('Login error:', error);
-      throw new Error('Failed to login. Please try again.');
+      throw new Error('Failed to login. Please check your credentials.');
     }
   };
 

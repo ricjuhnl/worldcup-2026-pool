@@ -51,9 +51,10 @@ export const sanitizeUsername = (input: string): string => {
     .replace(/\.$/, '');
 };
 
-export const handleUserLogin = async (username: string): Promise<UserData> => {
+export const handleUserLogin = async (username: string, password: string): Promise<UserData> => {
   const response = await axios.post(`${API_BASE_URL}/users`, {
     username,
+    password,
   });
   
   const data = response.data as UserData;

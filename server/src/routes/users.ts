@@ -1,9 +1,11 @@
 import { Router, Request, Response } from 'express';
+import bcrypt from 'bcryptjs';
 import { getDb, saveDb } from '../db.js';
 
 const router = Router();
 
 const normalizeUsername = (username: string) => username.toLowerCase().replace(/\./g, '');
+const SALT_ROUNDS = 10;
 
 router.get('/:username', async (req: Request, res: Response) => {
   try {
@@ -31,14 +33,43 @@ router.get('/:username', async (req: Request, res: Response) => {
 
 router.post('/', async (req: Request, res: Response) => {
   try {
-    const { username, displayName } = req.body;
+    const { username, displayName, password } = req.body;
     
-    if (!username || username.length < 3) {
-      return res.status(400).json({ error: 'Username must be at least 3 characters' });
+    // Handle login (username + password)
+    if (password) {
+      const normalizedUsername = normalizeUsername(username);
+      const db = await getDb();
+      
+      // Get user with password hash
+      const userStmt = db.prepare('SELECT * FROM users WHERE id = ?');
+      userStmt.bind([normalizedUsername]);
+      
+      if (!userStmt.step()) {
+        userStmt.free();
+        return res.status(401).json({ error: 'Invalid username or password' });
+      }
+      
+      const user = userStmt.getAsObject() as any;
+      userStmt.free();
+      
+      // Verify password
+      const isValidPassword = await bcrypt.compare(password, user.password_hash);
+      if (!isValidPassword) {
+        return res.status(401).json({ error: 'Invalid username or password' });
+      }
+      
+      // Return user without password_hash
+      const { password_hash, ...userWithoutPassword } = user;
+      return res.json(userWithoutPassword);
     }
     
+    // Handle registration (no existing user, requires password)
     if (!displayName) {
       return res.status(400).json({ error: 'Display name is required' });
+    }
+    
+    if (!password || password.length < 4) {
+      return res.status(400).json({ error: 'Password must be at least 4 characters' });
     }
     
     const normalizedUsername = normalizeUsername(username);
@@ -67,6 +98,9 @@ router.post('/', async (req: Request, res: Response) => {
     countStmt.free();
     const isAdmin = userCount.count === 0 ? 1 : 0;
     
+    // Hash password
+    const passwordHash = await bcrypt.hash(password, SALT_ROUNDS);
+    
     // Create user
     const avatarInitials = displayName
       .split(' ')
@@ -76,20 +110,20 @@ router.post('/', async (req: Request, res: Response) => {
       .slice(0, 2);
     
     db.run(
-      'INSERT INTO users (id, display_name, avatar_initials, score, created_at, is_admin) VALUES (?, ?, ?, 0, ?, ?)',
-      [normalizedUsername, displayName, avatarInitials, Date.now(), isAdmin]
+      'INSERT INTO users (id, display_name, avatar_initials, score, created_at, is_admin, password_hash) VALUES (?, ?, ?, 0, ?, ?, ?)',
+      [normalizedUsername, displayName, avatarInitials, Date.now(), isAdmin, passwordHash]
     );
     
     saveDb();
     
-    const newUserStmt = db.prepare('SELECT * FROM users WHERE id = ?');
+    const newUserStmt = db.prepare('SELECT id, display_name, avatar_initials, score, created_at, is_admin FROM users WHERE id = ?');
     newUserStmt.bind([normalizedUsername]);
     const newUser = newUserStmt.step() ? newUserStmt.getAsObject() as any : null;
     newUserStmt.free();
     
     res.status(201).json(newUser);
   } catch (error) {
-    console.error('Error creating user:', error);
+    console.error('Error handling user request:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
