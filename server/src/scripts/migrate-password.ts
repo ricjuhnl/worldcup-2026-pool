@@ -23,7 +23,11 @@ async function addPasswordHashColumn() {
     
     // Add the column
     db.run('ALTER TABLE users ADD COLUMN password_hash TEXT');
-    console.log('Successfully added password_hash column');
+    
+    // IMPORTANT: Save the database to persist the changes
+    saveDb();
+    
+    console.log('Successfully added password_hash column and saved database');
     
   } catch (error) {
     console.error('Error adding column:', error);
