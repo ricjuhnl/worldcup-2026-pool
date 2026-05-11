@@ -3,7 +3,7 @@ import type { UserData } from './userService';
 import type { MatchesData } from './matchService';
 import { fetchMatches } from './matchService';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+const API_BASE_URL = import.meta.env.VITE_API_URL;
 
 const MOCK_NAMES: [string, string][] = [
   ['James', 'Hetfield'],
