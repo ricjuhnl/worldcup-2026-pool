@@ -8,6 +8,9 @@ services:
     environment:
       - NODE_ENV=production
       - PORT=3000
+      - CORS_ORIGIN=http://server:5173
+    networks:
+      - app-network
     restart: unless-stopped
 
   web:
@@ -18,4 +21,10 @@ services:
       - server
     environment:
       - VITE_API_URL=http://server:3000/api
+    networks:
+      - app-network
     restart: unless-stopped
+
+networks:
+  app-network:
+    driver: bridge

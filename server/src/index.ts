@@ -10,7 +10,29 @@ import { syncMatchesFromApi } from './services/matchSync.js';
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-app.use(cors());
+// Configure CORS to allow requests from the web container and external origins
+const corsOptions: cors.CorsOptions = {
+  origin: (origin, callback) => {
+    // Allow requests from the web container (Docker network)
+    const allowedOrigins = [
+      'http://server:5173',
+      'http://localhost:5173',
+      'https://poule.ricjuh.nl'
+    ];
+    
+    // Allow requests without origin (like Postman or curl)
+    if (!origin) return callback(null, true);
+    
+    if (allowedOrigins.includes(origin) || process.env.CORS_ORIGIN === '*') {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true
+};
+
+app.use(cors(corsOptions));
 app.use(express.json());
 
 app.use('/api/users', userRoutes);
