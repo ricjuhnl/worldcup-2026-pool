@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL;
+const API_BASE_URL = ''; // Relative path - will use same origin, proxied by Nginx
 
 export interface Prediction {
   homePrediction: number;
