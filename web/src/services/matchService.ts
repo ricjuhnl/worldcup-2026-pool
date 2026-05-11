@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_BASE_URL = ''; // Relative path - will use same origin, proxied by Nginx
+const API_BASE_URL = '/api'; // Proxy path through Nginx
 
 export interface Match {
   game: number;
