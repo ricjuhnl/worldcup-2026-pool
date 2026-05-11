@@ -35,50 +35,7 @@ router.post('/', async (req: Request, res: Response) => {
   try {
     const { username, displayName, password } = req.body;
     
-    // Handle login (username + password)
-    if (password) {
-      const normalizedUsername = normalizeUsername(username);
-      const db = await getDb();
-      
-      // Get user with password hash
-      const userStmt = db.prepare('SELECT * FROM users WHERE id = ?');
-      userStmt.bind([normalizedUsername]);
-      
-      if (!userStmt.step()) {
-        userStmt.free();
-        return res.status(401).json({ error: 'Invalid username or password' });
-      }
-      
-      const user = userStmt.getAsObject() as any;
-      userStmt.free();
-      
-      // Verify password
-      const isValidPassword = await bcrypt.compare(password, user.password_hash);
-      if (!isValidPassword) {
-        return res.status(401).json({ error: 'Invalid username or password' });
-      }
-      
-      // Return user without password_hash
-      const { password_hash, ...userWithoutPassword } = user;
-      return res.json(userWithoutPassword);
-    }
-    
-    // Handle registration (no existing user, requires password)
-    if (!displayName) {
-      return res.status(400).json({ error: 'Display name is required' });
-    }
-    
-    if (!password || password.length < 4) {
-      return res.status(400).json({ error: 'Password must be at least 4 characters' });
-    }
-    
-    const normalizedUsername = normalizeUsername(username);
-    const reservedUsernames = ['about', 'leaderboard', 'rules', 'edit-profile', 'editprofile', 'admin', 'api', 'settings', 'login', 'signin', 'signup', 'register', 'logout', 'signout', 'profile', 'user', 'users', 'club', 'clubs', 'league', 'leagues'];
-    
-    if (reservedUsernames.includes(normalizedUsername)) {
-      return res.status(400).json({ error: 'Username is reserved' });
-    }
-    
+    const normalizedUsername = normalizeUsername(username || '');
     const db = await getDb();
     
     // Check if user exists
@@ -88,7 +45,62 @@ router.post('/', async (req: Request, res: Response) => {
     checkStmt.free();
     
     if (existingUser) {
-      return res.json(existingUser);
+      // User exists - handle login or password update
+      const hasPasswordHash = existingUser.password_hash;
+      
+      if (password) {
+        if (hasPasswordHash) {
+          // User has password - verify it
+          const isValidPassword = await bcrypt.compare(password, existingUser.password_hash);
+          if (!isValidPassword) {
+            return res.status(401).json({ error: 'Invalid username or password' });
+          }
+          // Return user without password_hash
+          const { password_hash, ...userWithoutPassword } = existingUser;
+          return res.json(userWithoutPassword);
+        } else {
+          // User has no password yet - this is a password update or first-time login
+          if (!displayName) {
+            return res.status(400).json({ error: 'Display name is required for new users' });
+          }
+          if (password.length < 4) {
+            return res.status(400).json({ error: 'Password must be at least 4 characters' });
+          }
+          // Hash and update password
+          const passwordHash = await bcrypt.hash(password, SALT_ROUNDS);
+          db.run('UPDATE users SET password_hash = ? WHERE id = ?', [passwordHash, normalizedUsername]);
+          saveDb();
+          const { password_hash, ...userWithoutPassword } = existingUser;
+          return res.json(userWithoutPassword);
+        }
+      } else {
+        // No password provided - check if user has one
+        if (hasPasswordHash) {
+          return res.status(401).json({ error: 'Password is required for this account' });
+        }
+        // User has no password - allow login (backwards compatible)
+        const { password_hash, ...userWithoutPassword } = existingUser;
+        return res.json(userWithoutPassword);
+      }
+    }
+    
+    // New user registration - requires password
+    if (!displayName) {
+      return res.status(400).json({ error: 'Display name is required' });
+    }
+    
+    if (!username || username.length < 3) {
+      return res.status(400).json({ error: 'Username must be at least 3 characters' });
+    }
+    
+    if (!password || password.length < 4) {
+      return res.status(400).json({ error: 'Password must be at least 4 characters' });
+    }
+    
+    const reservedUsernames = ['about', 'leaderboard', 'rules', 'edit-profile', 'editprofile', 'admin', 'api', 'settings', 'login', 'signin', 'signup', 'register', 'logout', 'signout', 'profile', 'user', 'users', 'club', 'clubs', 'league', 'leagues'];
+    
+    if (reservedUsernames.includes(normalizedUsername)) {
+      return res.status(400).json({ error: 'Username is reserved' });
     }
     
     // Check if this is the first user (make them admin)
