@@ -66,6 +66,8 @@ export const syncMatchScores = async () => {
     console.log('Syncing match scores from FIFA API...');
     
     const now = new Date();
+    const twoDaysAgo = new Date(now);
+    twoDaysAgo.setDate(twoDaysAgo.getDate() - 2);
     const startOfDay = new Date(now);
     startOfDay.setHours(0, 0, 0, 0);
     const endOfDay = new Date(now);
@@ -74,7 +76,7 @@ export const syncMatchScores = async () => {
     const url = new URL(FIFA_API_URL);
     url.searchParams.set('idseason', SEASON_ID);
     url.searchParams.set('idcompetition', COMPETITION_ID);
-    url.searchParams.set('from', startOfDay.toISOString());
+    url.searchParams.set('from', twoDaysAgo.toISOString());
     url.searchParams.set('to', endOfDay.toISOString());
     url.searchParams.set('count', '500');
     
