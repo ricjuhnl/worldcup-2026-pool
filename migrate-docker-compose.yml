@@ -1,0 +1,10 @@
+services:
+  migrate:
+    image: alpine:latest
+    container_name: volume-migrate
+    command: cp /source/database.sqlite /new/
+    volumes:
+      - /home/rjuhasz/Projects/worldcup-2026-pool/server/data:/source
+      - db-data:/new
+volumes:
+  db-data:
