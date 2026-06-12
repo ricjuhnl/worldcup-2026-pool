@@ -160,6 +160,8 @@ router.post('/sync', async (req: Request, res: Response) => {
 
     saveDb();
 
+    await recalculatePoints();
+
     // Return transformed matches to client as an object
     const transformedMatches = matches.map(transformMatch);
     const matchesObject: any = {};
