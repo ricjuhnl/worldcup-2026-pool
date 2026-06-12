@@ -131,7 +131,7 @@ router.post('/sync', async (req: Request, res: Response) => {
 
     const insertStmt = db.prepare(`
       INSERT INTO matches (game, fifa_id, round, group_letter, date, location, location_city, location_country, stadium, home_abbreviation, home_team, away_abbreviation, away_team, home_score, away_score)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
 
     for (const match of matches) {
