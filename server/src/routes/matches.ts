@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { getDb, saveDb } from '../db.js';
+import { recalculatePoints } from '../cron.js';
 
 const router = Router();
 

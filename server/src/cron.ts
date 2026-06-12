@@ -148,7 +148,7 @@ export const syncMatchScores = async () => {
   }
 };
 
-const recalculatePoints = async () => {
+export const recalculatePoints = async () => {
   try {
     console.log('Recalculating prediction points...');
     
