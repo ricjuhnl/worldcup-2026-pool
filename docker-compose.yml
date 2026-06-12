@@ -4,7 +4,7 @@ services:
     ports:
       - "3000:3000"
     volumes:
-      - ./server/data:/app/data
+      - db-data:/app/data
     environment:
       - NODE_ENV=production
       - PORT=3000
@@ -23,6 +23,9 @@ services:
     networks:
       - app-network
     restart: unless-stopped
+
+volumes:
+  db-data:
 
 networks:
   app-network:
